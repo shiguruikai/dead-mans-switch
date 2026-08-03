@@ -30,7 +30,7 @@ Cloudflare Workers + Hono + KV 上で稼働する、全自動不活動検知・�
 # 1. 依存パッケージのインストール
 pnpm install
 
-# 2. KV ネームスペース作成（出力された ID を wrangler.toml へ設定）
+# 2. KV ネームスペース作成（出力された ID を wrangler.jsonc へ設定）
 pnpm wrangler kv:namespace create DMS_KV
 
 # 3. シークレット（PING_SECRET_TOKEN, OWNER_EMAIL_ADDRESS, KIN_EMAIL_ADDRESS, VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY）の設定
@@ -50,7 +50,7 @@ pnpm deploy
 
 > **[!IMPORTANT]**
 >
-> - **Cloudflare Email Send**: 送信先の親族アドレス（`KIN_EMAIL_ADDRESS`）はあらかじめ **Cloudflare Dashboard > Email Routing > Destination addresses** で受信承認（Verify）を済ませておいてください。また、差出人として所有ドメインの `SENDER_EMAIL_ADDRESS` を `wrangler.toml` に指定してください。
+> - **Cloudflare Email Send（完全無料 $0）**: 送信先の親族アドレス（`KIN_EMAIL_ADDRESS`）および本人警告アドレス（`OWNER_EMAIL_ADDRESS`）は、あらかじめ **Cloudflare Dashboard > Email Routing > Destination addresses** で事前登録・受信承認（Verify）を済ませておいてください。Cloudflare の仕様により、**事前認証済みの Destination address 宛てへのメール送信は Workers Free プランを含む全プランで完全無料（$0・クォータ制限なし）** で利用できます。また、差出人として所有ドメインの `SENDER_EMAIL_ADDRESS` を `wrangler.jsonc` に指定してください。
 > - **ドメイン維持・クレカ解約リスクへの対策（最悪の想定）**: 本人が死亡した際、親族がクレジットカードを解約または口座を凍結することで、ドメインの自動更新が失敗し死後通知前にドメインが失効するリスクがあります。不活動期間（`DEAD_DAYS`）を2ヶ月以上の長期に設定する場合は、**ドメインを5年〜10年分まとめて前払い（一括更新）しておくか、不活動期間を30日以内に設定する運用**を強く推奨します。
 > - **Cloudflare Zero Trust**: デプロイ後、**Zero Trust > Access > Applications** で `/checkin` パスに対し本人のメールアドレスのみ許可するポリシーを設定してください。
 

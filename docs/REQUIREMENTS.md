@@ -57,7 +57,7 @@ stateDiagram-v2
 
 ## 4. 非機能要件
 
-1. **永続性・コスト**: Cloudflare Workers + KV を使用し、完全無料枠（$0）で無期限に安定稼働すること。
+1. **永続性・コスト**: Cloudflare Workers + KV を使用し、完全無料枠（$0）で無期限に安定稼働すること。※ Cloudflare Email Send において、あらかじめ Cloudflare Dashboard（Email Routing > Destination addresses）にて事前認証（Verify）を完了させた指定宛先アドレス（親族・本人宛）へのメール送信は、Workers Free プランを含む全プランで**完全無料（$0）かつ送信数上限のカウント対象外**として利用可能。
 2. **セキュリティ**: Web ページ `/checkin` は Cloudflare Zero Trust (Access) で保護し、外部からの誤操作・クローラーアクセスを100%遮断すること。APIトークン、Web Push 秘密鍵、送信元/通知先アドレス、死後通知本文は Wrangler Secrets / 環境変数で分離保護すること。
 3. **品質保証**: Vitest (`@cloudflare/vitest-pool-workers`) によるローカル自動テスト環境を含むこと。
 
