@@ -36,8 +36,9 @@ pnpm wrangler kv:namespace create DMS_KV
 # 3. シークレット（PING_SECRET_TOKEN, OWNER_EMAIL_ADDRESS, KIN_EMAIL_ADDRESS, VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY）の設定
 # ※設定コマンドの詳細リストについては「docs/進め方.md」の 3. 環境設定 & デプロイ を参照してください。
 
-# 4. 型チェック・テスト実行
-pnpm exec tsc --noEmit
+# 4. 型チェック・リント・テスト実行
+pnpm typecheck
+pnpm lint
 pnpm test
 
 # 5. ローカル開発サーバー起動

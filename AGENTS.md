@@ -10,7 +10,7 @@ Cloudflare Workers + Hono + KV 上で稼働する、全自動不活動検知・�
 
 ## 技術スタック
 
-- **言語・実行基盤**: TypeScript (v7.x), Node.js v24, Cloudflare Workers (`compatibility_flags = ["nodejs_compat"]`)
+- **言語・実行基盤**: TypeScript (v6.x), Node.js v24, Cloudflare Workers (`compatibility_flags = ["nodejs_compat"]`)
 - **フレームワーク**: Hono (v4.x)
 - **パッケージ管理**: pnpm
 - **ストレージ・定時実行**: Cloudflare KV (`DMS_KV`), Cloudflare Cron Triggers (`0 0 * * *`)
@@ -18,23 +18,25 @@ Cloudflare Workers + Hono + KV 上で稼働する、全自動不活動検知・�
 - **通知機能**:
   - **本人警告**: Cloudflare Email Send + Web Push（`web-push`, VAPID, Service Worker `public/sw.js`）※複数端末同時一括配信対応
   - **死後通知**: Cloudflare Email Send（`mimetext`, `cloudflare:email`, `SENDER_EMAIL_ADDRESS`）
-- **テスト・ツール**: Vitest (`@cloudflare/vitest-pool-workers`), Wrangler (v3)
+- **品質・テスト・ツール**: Vitest (`@cloudflare/vitest-pool-workers`), ESLint (v10, Flat Config, `@stylistic`), Wrangler (v4)
 
 ## コマンド
 
 - `pnpm install`: 依存パッケージのインストール
 - `pnpm dev`: Wrangler によるローカル開発サーバー起動 (`wrangler dev`)
+- `pnpm typecheck`: 型定義自動生成（`cf-typegen`）および TypeScript 型チェック (`tsc --noEmit`)
+- `pnpm lint`: ESLint によるコード静的解析
+- `pnpm lint:fix`: ESLint による自動修復
 - `pnpm test`: Vitest による全単体テスト実行
-- `pnpm exec tsc --noEmit`: TypeScript 型チェック
 - `pnpm deploy`: Cloudflare Workers への本番デプロイ
 - `pnpm wrangler kv:namespace create DMS_KV`: KV ネームスペースの作成
 - `pnpm wrangler secret put <KEY>`: シークレット環境変数の設定
 
 ## 設計・開発ルール
 
-### 1. ドキュメント参照・更新ルール（コンテキスト制御）
+### 1. ドキュメント参照・更新ルール
 
-無駄なコンテキスト消費を防ぐため、作業対象や変更影響範囲に応じて必要なドキュメントを参照・更新してください。
+作業対象に応じた関連ドキュメントを参照・更新すること。
 
 | 作業対象・変更内容                            | 参照・更新すべきドキュメント            |
 | :-------------------------------------------- | :-------------------------------------- |
@@ -45,36 +47,29 @@ Cloudflare Workers + Hono + KV 上で稼働する、全自動不活動検知・�
 
 ### 2. ドキュメント記述ルール
 
-- ドキュメント内リンクは常に**相対パス**を使用し、絶対パス（`file:///`）を使用しないこと。
-- 日本語の文章においては、半角括弧 `()` ではなく、**全角括弧 `（）`** を使用し、前後にスペースを含めないこと（半角括弧の前後は半角スペース）。
+- ドキュメント内リンクは相対パスを使用し、絶対パス（`file:///`）を使用しないこと。
+- 日本語の文章においては、半角括弧 `()` ではなく全角括弧 `（）` を使用し、前後にスペースを含めないこと（半角括弧の前後は半角スペース）。
 
 ### 3. タスク完了の定義（DoD: Definition of Done）
 
-コード実装・変更タスクを完了とするには、以下の条件をすべて満たす必要があります：
+タスク完了には以下の全条件を満たすこと：
 
-1. **コード実装**: `docs/進め方.md` のフェーズ規定に沿ったモジュール実装
-2. **検証通過**: `pnpm exec tsc --noEmit`（型チェック）および `pnpm test`（単体テスト）がエラーゼロで成功すること
-3. **ドキュメント更新**: 仕様・構造の変更に伴う関連ドキュメント（`docs/REQUIREMENTS.md`, `docs/ARCHITECTURE.md`, `README.md`, `docs/進め方.md` 等）の最新化
+1. **実装**: 仕様に沿ったモジュール実装
+2. **検証成功**: `pnpm typecheck`（型チェック）、`pnpm lint`（ESLint）、`pnpm test`（単体テスト）がすべてエラーゼロで成功すること
+3. **ドキュメント同期**: 仕様・構造変更に伴う関連ドキュメントの最新化
 
 ### 4. 仕様不整合・トラブル発生時の原則
 
-- **不具合隠蔽の禁止**: コードと仕様書（`docs/`）の間に不整合や技術制約によるバッティングが発生した場合、独断で例外の隠蔽や無理なコード修正を行わず、原因と変更案を提示してユーザーと合意形成を行うこと。仕様変更が生じた場合はコードとドキュメントを同時に更新すること。
-- **デグレード防止**: 試行錯誤やコードの修正・復元を行う際は、`git stash` や一時バックアップによる退避と差分確認を行い、既存機能やテストを破棄・退化させないこと。
-
-## テストルール
-
-- 新機能の追加・バグ修正時は、`test/index.test.ts` にテストケースを追加・更新し、`pnpm test` がすべて PASS することを確認すること。
-- モック化（Cloudflare KV / Email / Web Push）を活用し、エッジ環境特有の挙動（12時間マージン判定、410エラー時の無効端末自動削除クリーンアップ、`DEAD` ロックアウト制御）を検証すること。
+- **不具合隠蔽の禁止**: 仕様との不整合が発生した場合、原因と変更案を提示しユーザーと合意形成を行うこと。
+- **デグレード防止**: 変更の破棄や復元時は `git stash` や一時退避を行い、既存の合格状態を破壊しないこと。
 
 ## Gitルール
 
-- **コミットメッセージ**: `Conventional Commits` 形式（`<type>: <description>`）に準拠し、`<description>` 部分は**簡潔な日本語**で記述すること（例: `feat: フェーズ1のプロジェクト基盤初期化および型定義の追加`）。
-  - 主な type: `feat`, `fix`, `docs`, `refactor`, `test`, `build`, `ci`
-- **コミットタイミング**: 原則としてモジュール単位またはロードマップの各フェーズが完了し、型チェックおよび単体テストが成功した段階でコミット提案を行うこと。
-- **事前検証**: コミット前に必ず `pnpm exec tsc --noEmit` および `pnpm test` を実行すること。
-- **ユーザー確認の必須**: ユーザーの明示的な指示がない限り、自動で `git commit` や `git push` を行ってはならない。必ず事前にユーザーの確認と許可を得ること。
+- **事前検証**: コミット前に必ず `pnpm typecheck`、`pnpm lint`、`pnpm test` をすべて実行し成功させること。
+- **コミットメッセージ**: `Conventional Commits` 形式（`<type>: <description>`）に準拠し、`<description>` は簡潔な日本語で記述すること（例: `feat: ESLintの導入`）。
+- **ユーザー確認**: ユーザーの明示的な指示がない限り、自動で `git commit` や `git push` を行わず事前に許可を得ること。
 
 ## 禁止事項
 
-- **不要なコマンド実行の禁止**: 変更ファイルが Markdown（`*.md`）のみの場合、型チェック・ビルド・テスト等のコマンドを実行しないでください。
-- **無断の秘密情報ハードコーディング**: API トークン、メールアドレス、VAPID 秘密鍵等のシークレットをソースコードや `wrangler.toml` にハードコーディングしないでください。
+- **不要な検証コマンド実行の禁止**: 変更ファイルが Markdown（`*.md`）のみの場合、型チェック・ビルド・テスト等のコマンドを実行しないこと。
+- **秘密情報のハードコーディング禁止**: API トークン等のシークレットをソースコードや設定ファイルに直書きしないこと。
