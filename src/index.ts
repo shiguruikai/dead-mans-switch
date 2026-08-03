@@ -1,16 +1,18 @@
+import type { Context } from 'hono';
 import { Hono } from 'hono';
-import type { Env, PushSubscription } from './types';
+
+import { processScheduledCheck } from './services/cron';
 import {
+  addPushSubscription,
   getSystemData,
   updateActivity,
-  addPushSubscription,
 } from './services/kv';
-import { processScheduledCheck } from './services/cron';
+import type { Env, PushSubscription } from './types';
 
 const app = new Hono<{ Bindings: Env }>();
 
 // Ping Token Auth Middleware
-const authMiddleware = async (c: any, next: () => Promise<void>) => {
+const authMiddleware = async (c: Context<{ Bindings: Env }>, next: () => Promise<void>) => {
   const token = c.req.header('X-Ping-Token');
   if (!token || token !== c.env.PING_SECRET_TOKEN) {
     return c.json({ error: 'Unauthorized' }, 401);
@@ -96,11 +98,11 @@ app.get('/checkin', async (c) => {
       </div>
       <div class="info-row">
         <span class="label">不活動経過日数</span>
-        <span class="val">${diffDays} 日間</span>
+        <span class="val">${diffDays.toString()} 日間</span>
       </div>
       <div class="info-row">
         <span class="label">Web Push 登録端末数</span>
-        <span class="val">${data.push_subscriptions.length} 台</span>
+        <span class="val">${data.push_subscriptions.length.toString()} 台</span>
       </div>
     </div>
 
@@ -189,29 +191,31 @@ app.post('/api/ping', authMiddleware, async (c) => {
       status: updated.status,
       last_active_at: updated.last_active_at,
     });
-  } catch (err: any) {
-    if (err.message.includes('DEAD')) {
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : String(err);
+    if (message.includes('DEAD')) {
       return c.json({ error: 'System locked out (status is DEAD)' }, 403);
     }
-    return c.json({ error: err.message }, 500);
+    return c.json({ error: message }, 500);
   }
 });
 
 // 3. POST /api/push/subscribe (Zero Trust protected)
 app.post('/api/push/subscribe', async (c) => {
   try {
-    const subscription = await c.req.json<PushSubscription>();
-    if (!subscription || !subscription.endpoint || !subscription.keys) {
+    const subscription = (await c.req.json()) as unknown as Partial<PushSubscription>;
+    if (!subscription.endpoint || !subscription.keys) {
       return c.json({ error: 'Invalid PushSubscription format' }, 400);
     }
 
-    const updated = await addPushSubscription(c.env.DMS_KV, subscription);
+    const updated = await addPushSubscription(c.env.DMS_KV, subscription as PushSubscription);
     return c.json({
       success: true,
       total_devices: updated.push_subscriptions.length,
     });
-  } catch (err: any) {
-    return c.json({ error: err.message }, 500);
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : String(err);
+    return c.json({ error: message }, 500);
   }
 });
 
@@ -236,7 +240,7 @@ export { app };
 
 export default {
   fetch: app.fetch,
-  async scheduled(event: ScheduledEvent, env: Env, ctx: ExecutionContext) {
+  scheduled(event: ScheduledEvent, env: Env, ctx: ExecutionContext) {
     ctx.waitUntil(processScheduledCheck(env));
   },
 };

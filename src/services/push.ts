@@ -1,4 +1,5 @@
 import webpush from 'web-push';
+
 import type { Env, PushSubscription } from '../types';
 
 export interface PushResult {
@@ -11,7 +12,7 @@ export interface PushResult {
 export async function sendNotification(
   env: Env,
   subscription: PushSubscription,
-  payload: string
+  payload: string,
 ): Promise<PushResult> {
   const options: webpush.RequestOptions = {
     vapidDetails: {
@@ -28,11 +29,12 @@ export async function sendNotification(
       success: true,
       statusCode: res.statusCode,
     };
-  } catch (err: any) {
+  } catch (err: unknown) {
+    const statusCode = (err as { statusCode?: number } | null)?.statusCode;
     return {
       endpoint: subscription.endpoint,
       success: false,
-      statusCode: err?.statusCode,
+      statusCode,
       error: err,
     };
   }
@@ -41,9 +43,9 @@ export async function sendNotification(
 export async function sendNotificationToAll(
   env: Env,
   subscriptions: PushSubscription[],
-  payload: string
+  payload: string,
 ): Promise<PushResult[]> {
   return Promise.all(
-    subscriptions.map((sub) => sendNotification(env, sub, payload))
+    subscriptions.map((sub) => sendNotification(env, sub, payload)),
   );
 }

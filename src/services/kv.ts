@@ -1,5 +1,6 @@
 import type { KVNamespace } from '@cloudflare/workers-types';
-import type { SystemData, PushSubscription } from '../types';
+
+import type { PushSubscription, SystemData } from '../types';
 
 const KV_KEY = 'system_data';
 
@@ -47,11 +48,11 @@ export async function updateActivity(kv: KVNamespace): Promise<SystemData> {
 
 export async function addPushSubscription(
   kv: KVNamespace,
-  subscription: PushSubscription
+  subscription: PushSubscription,
 ): Promise<SystemData> {
   const current = await getSystemData(kv);
   const existingIndex = current.push_subscriptions.findIndex(
-    (sub) => sub.endpoint === subscription.endpoint
+    (sub) => sub.endpoint === subscription.endpoint,
   );
 
   let updatedSubs: PushSubscription[];
@@ -73,11 +74,11 @@ export async function addPushSubscription(
 
 export async function removePushSubscription(
   kv: KVNamespace,
-  endpoint: string
+  endpoint: string,
 ): Promise<SystemData> {
   const current = await getSystemData(kv);
   const updatedSubs = current.push_subscriptions.filter(
-    (sub) => sub.endpoint !== endpoint
+    (sub) => sub.endpoint !== endpoint,
   );
 
   const updated: SystemData = {

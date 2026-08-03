@@ -4,7 +4,7 @@ self.addEventListener('push', (event) => {
   if (event.data) {
     try {
       body = event.data.text();
-    } catch (e) {
+    } catch {
       // fallback
     }
   }
@@ -18,13 +18,13 @@ self.addEventListener('push', (event) => {
   };
 
   event.waitUntil(
-    self.registration.showNotification('【Dead Man\'s Switch】生存確認リマインダー', options)
+    self.registration.showNotification('【Dead Man\'s Switch】生存確認リマインダー', options),
   );
 });
 
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
   event.waitUntil(
-    clients.openWindow('/checkin')
+    clients.openWindow('/checkin'),
   );
 });

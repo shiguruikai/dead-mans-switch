@@ -1,34 +1,37 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+
 import { app } from '../src/index';
+import { processScheduledCheck } from '../src/services/cron';
 import {
+  addPushSubscription,
   getSystemData,
+  removePushSubscription,
   saveSystemData,
   updateActivity,
-  addPushSubscription,
-  removePushSubscription,
 } from '../src/services/kv';
-import { processScheduledCheck } from '../src/services/cron';
-import type { SystemData, PushSubscription, Env } from '../src/types';
+import type { Env, PushSubscription } from '../src/types';
 
 // In-Memory Mock for KVNamespace
 class MockKVNamespace {
   private store = new Map<string, string>();
 
-  async get<T>(key: string, type?: 'text' | 'json'): Promise<T | null> {
+  get<T>(key: string, type?: 'text' | 'json'): Promise<T | null> {
     const val = this.store.get(key);
-    if (!val) return null;
+    if (!val) return Promise.resolve(null);
     if (type === 'json') {
-      return JSON.parse(val) as T;
+      return Promise.resolve(JSON.parse(val) as T);
     }
-    return val as unknown as T;
+    return Promise.resolve(val as unknown as T);
   }
 
-  async put(key: string, value: string): Promise<void> {
+  put(key: string, value: string): Promise<void> {
     this.store.set(key, value);
+    return Promise.resolve();
   }
 
-  async delete(key: string): Promise<void> {
+  delete(key: string): Promise<void> {
     this.store.delete(key);
+    return Promise.resolve();
   }
 }
 
@@ -88,7 +91,7 @@ describe('KV Service (src/services/kv.ts)', () => {
     await saveSystemData(mockKv as any, initial);
 
     await expect(updateActivity(mockKv as any)).rejects.toThrow(
-      'System locked out (status is DEAD)'
+      'System locked out (status is DEAD)',
     );
   });
 
@@ -164,7 +167,7 @@ describe('Hono API Endpoints (src/index.ts)', () => {
     const resValid = await app.request(
       '/api/ping',
       { method: 'POST', headers: { 'X-Ping-Token': 'test-secret-token-123' } },
-      env
+      env,
     );
     expect(resValid.status).toBe(200);
     const body = await resValid.json<any>();
@@ -180,7 +183,7 @@ describe('Hono API Endpoints (src/index.ts)', () => {
     const res = await app.request(
       '/api/ping',
       { method: 'POST', headers: { 'X-Ping-Token': 'test-secret-token-123' } },
-      env
+      env,
     );
     expect(res.status).toBe(403);
   });
@@ -198,7 +201,7 @@ describe('Hono API Endpoints (src/index.ts)', () => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(sub),
       },
-      env
+      env,
     );
     expect(res.status).toBe(200);
     const body = await res.json<any>();
@@ -210,7 +213,7 @@ describe('Hono API Endpoints (src/index.ts)', () => {
     const res = await app.request(
       '/api/status',
       { headers: { 'X-Ping-Token': 'test-secret-token-123' } },
-      env
+      env,
     );
     expect(res.status).toBe(200);
     const body = await res.json<any>();

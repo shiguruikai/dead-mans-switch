@@ -1,10 +1,11 @@
-import { createMimeMessage } from 'mimetext';
 import { EmailMessage } from 'cloudflare:email';
+import { createMimeMessage } from 'mimetext';
+
 import type { Env } from '../types';
 
 export async function sendEmail(
   env: Env,
-  options: { to: string; subject: string; bodyTemplate: string }
+  options: { to: string; subject: string; bodyTemplate: string },
 ): Promise<void> {
   const formattedBody = options.bodyTemplate.replace(/\${BASE_URL}/g, env.BASE_URL);
 

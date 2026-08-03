@@ -1,6 +1,6 @@
 import type { Env, SystemData } from '../types';
-import { getSystemData, saveSystemData } from './kv';
 import { sendEmail } from './email';
+import { getSystemData, saveSystemData } from './kv';
 import { sendNotificationToAll } from './push';
 
 export async function processScheduledCheck(env: Env): Promise<SystemData> {
@@ -9,8 +9,8 @@ export async function processScheduledCheck(env: Env): Promise<SystemData> {
   const lastActive = new Date(data.last_active_at);
   const diffSeconds = (now.getTime() - lastActive.getTime()) / 1000;
 
-  const warningDays = parseInt(env.WARNING_DAYS || '7', 10);
-  const deadDays = parseInt(env.DEAD_DAYS || '14', 10);
+  const warningDays = Number.parseInt(env.WARNING_DAYS, 10);
+  const deadDays = Number.parseInt(env.DEAD_DAYS, 10);
 
   // 12時間マージン (43,200秒)
   const warningThreshold = warningDays * 86400 - 43200;
@@ -32,12 +32,10 @@ export async function processScheduledCheck(env: Env): Promise<SystemData> {
       await sendWarningNotifications(env, data, now);
       await saveSystemData(env.DMS_KV, data);
     }
-  } else if (data.status === 'DEAD') {
-    if (data.dead_sent_at === null) {
-      // 前回死後通知送信が失敗していた場合のリトライ
-      await sendDeadNotifications(env, data, now);
-      await saveSystemData(env.DMS_KV, data);
-    }
+  } else if (data.dead_sent_at === null) {
+    // 前回死後通知送信が失敗していた場合のリトライ
+    await sendDeadNotifications(env, data, now);
+    await saveSystemData(env.DMS_KV, data);
   }
 
   return data;
@@ -57,11 +55,11 @@ async function sendWarningNotifications(env: Env, data: SystemData, now: Date): 
   }
 
   // 2. Web Push Warning
-  if (data.push_subscriptions && data.push_subscriptions.length > 0) {
+  if (data.push_subscriptions.length > 0) {
     const results = await sendNotificationToAll(
       env,
       data.push_subscriptions,
-      '【Dead Man\'s Switch】アクティビティが途絶えています。生存確認を行ってください。'
+      '【Dead Man\'s Switch】アクティビティが途絶えています。生存確認を行ってください。',
     );
 
     // 404 / 410 エラー端末の自動削除クリーンアップ
@@ -79,9 +77,9 @@ async function sendWarningNotifications(env: Env, data: SystemData, now: Date): 
 }
 
 async function sendDeadNotifications(env: Env, data: SystemData, now: Date): Promise<void> {
-  const deadBodyTemplate =
-    env.DEAD_EMAIL_BODY ||
-    '本通知は Dead Man\'s Switch システムにより自動送信されています。\n規定期間のアクティビティが確認できなかったため、手続情報および案内をお送りいたします。';
+  const deadBodyTemplate
+    = env.DEAD_EMAIL_BODY
+      ?? '本通知は Dead Man\'s Switch システムにより自動送信されています。\n規定期間のアクティビティが確認できなかったため、手続情報および案内をお送りいたします。';
 
   try {
     await sendEmail(env, {
