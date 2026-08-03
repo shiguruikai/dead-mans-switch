@@ -10,7 +10,7 @@ Cloudflare Workers + Hono + KV 上で稼働する、全自動不活動検知・�
 
 ## 技術スタック
 
-- **言語・実行基盤**: TypeScript (v5 / v6), Node.js v24, Cloudflare Workers (`compatibility_flags = ["nodejs_compat"]`)
+- **言語・実行基盤**: TypeScript (v7.x), Node.js v24, Cloudflare Workers (`compatibility_flags = ["nodejs_compat"]`)
 - **フレームワーク**: Hono (v4.x)
 - **パッケージ管理**: pnpm
 - **ストレージ・定時実行**: Cloudflare KV (`DMS_KV`), Cloudflare Cron Triggers (`0 0 * * *`)

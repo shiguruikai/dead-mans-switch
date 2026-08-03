@@ -4,7 +4,7 @@
 
 | 区分                   | 採用技術 / サービス                   | 用途・詳細                                              |
 | :--------------------- | :------------------------------------ | :------------------------------------------------------ |
-| **開発言語**           | TypeScript (v5.x / v6.x)              | 型安全なWorker実装                                      |
+| **開発言語**           | TypeScript (v7.x)                     | 型安全なWorker実装                                      |
 | **フレームワーク**     | Hono (v4.x)                           | 軽量Webフレームワーク                                   |
 | **認証・アクセス制御** | Cloudflare Zero Trust (Access)        | `/checkin` Web ページの本人認証・保護（Google/Passkey） |
 | **実行基盤**           | Cloudflare Workers                    | サーバーレスランタイム (Wrangler v3, `nodejs_compat`)   |
@@ -28,7 +28,8 @@ dead-mans-switch/
 │   └── 進め方.md             # 実装ロードマップと進め方ガイド
 ├── package.json              # 依存関係定義
 ├── tsconfig.json             # TypeScript設定
-├── wrangler.toml             # 設定・非機密環境変数
+├── wrangler.toml             # 設定・非機密環境変数（wrangler.jsonc と同期）
+├── wrangler.jsonc            # 設定・非機密環境変数（JSONC形式）
 ├── vitest.config.ts          # Vitest 設定
 ├── public/
 │   └── sw.js                 # Service Worker（Web Push 受信 & /checkin 画面起動、Workers Assets で自動配信）
@@ -38,7 +39,8 @@ dead-mans-switch/
 │   └── services/
 │       ├── push.ts           # Web Push (VAPID) 送信モジュール
 │       ├── email.ts          # メール送信モジュール（Cloudflare Email Send）
-│       └── kv.ts             # KV 操作モジュール
+│       ├── kv.ts             # KV 操作モジュール
+│       └── cron.ts           # 定時チェック・判定・無効端末クリーンアップモジュール
 └── test/
     └── index.test.ts         # 自動テスト
 ```

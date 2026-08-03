@@ -16,7 +16,7 @@ Cloudflare Workers + Hono + KV 上で稼働する、全自動不活動検知・�
 
 ## 🚀 技術スタック
 
-- **TypeScript** (v5 / v6) / **Hono** (v4) / **pnpm**
+- **TypeScript** (v7) / **Hono** (v4) / **pnpm**
 - **Cloudflare Workers** (`nodejs_compat`) / **Cloudflare KV** / **Cron Triggers**
 - **Cloudflare Zero Trust (Access)** (本人認証・アクセス制限)
 - **Cloudflare Email Send** (`mimetext`) / **Web Push** (VAPID / Service Worker)
