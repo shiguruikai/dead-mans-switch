@@ -1,4 +1,5 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { app } from '../src/index';
 import {
   getSystemData,
   saveSystemData,
@@ -6,7 +7,8 @@ import {
   addPushSubscription,
   removePushSubscription,
 } from '../src/services/kv';
-import type { SystemData, PushSubscription } from '../src/types';
+import { processScheduledCheck } from '../src/services/cron';
+import type { SystemData, PushSubscription, Env } from '../src/types';
 
 // In-Memory Mock for KVNamespace
 class MockKVNamespace {
@@ -28,6 +30,29 @@ class MockKVNamespace {
   async delete(key: string): Promise<void> {
     this.store.delete(key);
   }
+}
+
+function createMockEnv(kv: MockKVNamespace): Env {
+  return {
+    DMS_KV: kv as any,
+    EMAIL_SEND: {
+      send: vi.fn().mockResolvedValue(undefined),
+    },
+    BASE_URL: 'https://dead-mans-switch.example.workers.dev',
+    WARNING_DAYS: '7',
+    DEAD_DAYS: '14',
+    WARNING_EMAIL_SUBJECT: '【重要】生存確認リマインダー',
+    WARNING_EMAIL_BODY: 'アクティビティが途絶えています: ${BASE_URL}/checkin',
+    DEAD_EMAIL_SUBJECT: '【重要通知】手続情報案内',
+    VAPID_SUBJECT: 'mailto:owner@example.com',
+    SENDER_EMAIL_ADDRESS: 'noreply@yourdomain.com',
+    PING_SECRET_TOKEN: 'test-secret-token-123',
+    OWNER_EMAIL_ADDRESS: 'owner@example.com',
+    KIN_EMAIL_ADDRESS: 'kin@example.com',
+    DEAD_EMAIL_BODY: '死後通知本文',
+    VAPID_PUBLIC_KEY: 'test-public-key',
+    VAPID_PRIVATE_KEY: 'test-private-key',
+  };
 }
 
 describe('KV Service (src/services/kv.ts)', () => {
@@ -81,7 +106,6 @@ describe('KV Service (src/services/kv.ts)', () => {
     let data = await addPushSubscription(mockKv as any, sub2);
     expect(data.push_subscriptions.length).toBe(2);
 
-    // Update existing subscription
     const updatedSub1: PushSubscription = {
       endpoint: 'https://push.example.com/sub1',
       keys: { p256dh: 'key1_updated', auth: 'auth1_updated' },
@@ -100,5 +124,140 @@ describe('KV Service (src/services/kv.ts)', () => {
 
     const data = await removePushSubscription(mockKv as any, 'https://push.example.com/sub1');
     expect(data.push_subscriptions.length).toBe(0);
+  });
+});
+
+describe('Hono API Endpoints (src/index.ts)', () => {
+  let mockKv: MockKVNamespace;
+  let env: Env;
+
+  beforeEach(() => {
+    mockKv = new MockKVNamespace();
+    env = createMockEnv(mockKv);
+  });
+
+  it('GET /checkin returns HTML dashboard for NORMAL status', async () => {
+    const res = await app.request('/checkin', {}, env);
+    expect(res.status).toBe(200);
+    const html = await res.text();
+    expect(html).toContain('Dead Man\'s Switch');
+    expect(html).toContain('NORMAL');
+    expect(html).toContain('手動生存報告');
+  });
+
+  it('GET /checkin returns lockout page for DEAD status', async () => {
+    const data = await getSystemData(mockKv as any);
+    data.status = 'DEAD';
+    await saveSystemData(mockKv as any, data);
+
+    const res = await app.request('/checkin', {}, env);
+    expect(res.status).toBe(200);
+    const html = await res.text();
+    expect(html).toContain('死後通知送信完了（システムロックアウト中）');
+    expect(html).not.toContain('pingBtn');
+  });
+
+  it('POST /api/ping requires X-Ping-Token header', async () => {
+    const resUnauthorized = await app.request('/api/ping', { method: 'POST' }, env);
+    expect(resUnauthorized.status).toBe(401);
+
+    const resValid = await app.request(
+      '/api/ping',
+      { method: 'POST', headers: { 'X-Ping-Token': 'test-secret-token-123' } },
+      env
+    );
+    expect(resValid.status).toBe(200);
+    const body = await resValid.json<any>();
+    expect(body.success).toBe(true);
+    expect(body.status).toBe('NORMAL');
+  });
+
+  it('POST /api/ping returns 403 when system status is DEAD', async () => {
+    const data = await getSystemData(mockKv as any);
+    data.status = 'DEAD';
+    await saveSystemData(mockKv as any, data);
+
+    const res = await app.request(
+      '/api/ping',
+      { method: 'POST', headers: { 'X-Ping-Token': 'test-secret-token-123' } },
+      env
+    );
+    expect(res.status).toBe(403);
+  });
+
+  it('POST /api/push/subscribe stores subscription', async () => {
+    const sub: PushSubscription = {
+      endpoint: 'https://push.example.com/test-endpoint',
+      keys: { p256dh: 'p256', auth: 'auth' },
+    };
+
+    const res = await app.request(
+      '/api/push/subscribe',
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(sub),
+      },
+      env
+    );
+    expect(res.status).toBe(200);
+    const body = await res.json<any>();
+    expect(body.success).toBe(true);
+    expect(body.total_devices).toBe(1);
+  });
+
+  it('GET /api/status returns status details', async () => {
+    const res = await app.request(
+      '/api/status',
+      { headers: { 'X-Ping-Token': 'test-secret-token-123' } },
+      env
+    );
+    expect(res.status).toBe(200);
+    const body = await res.json<any>();
+    expect(body.status).toBe('NORMAL');
+    expect(typeof body.days_since_active).toBe('number');
+  });
+});
+
+describe('Scheduled Cron Trigger (src/services/cron.ts)', () => {
+  let mockKv: MockKVNamespace;
+  let env: Env;
+
+  beforeEach(() => {
+    mockKv = new MockKVNamespace();
+    env = createMockEnv(mockKv);
+  });
+
+  it('should remain NORMAL if activity is recent', async () => {
+    const result = await processScheduledCheck(env);
+    expect(result.status).toBe('NORMAL');
+    expect(env.EMAIL_SEND.send).not.toHaveBeenCalled();
+  });
+
+  it('should transition to WARNING when inactive >= 6.5 days (12h margin)', async () => {
+    const data = await getSystemData(mockKv as any);
+    // 7 days - 12h = 6.5 days = 561,600 seconds. Set last_active_at to 7 days ago.
+    const sevenDaysAgo = new Date(Date.now() - 7 * 86400 * 1000);
+    data.last_active_at = sevenDaysAgo.toISOString();
+    await saveSystemData(mockKv as any, data);
+
+    const result = await processScheduledCheck(env);
+    expect(result.status).toBe('WARNING');
+    expect(result.warning_sent_at).not.toBeNull();
+    expect(env.EMAIL_SEND.send).toHaveBeenCalledTimes(1);
+  });
+
+  it('should transition to DEAD when inactive >= 13.5 days (12h margin) and warning_sent_at is set', async () => {
+    const data = await getSystemData(mockKv as any);
+    const fourteenDaysAgo = new Date(Date.now() - 14 * 86400 * 1000);
+    data.last_active_at = fourteenDaysAgo.toISOString();
+    data.status = 'WARNING';
+    data.warning_sent_at = new Date(Date.now() - 7 * 86400 * 1000).toISOString();
+    await saveSystemData(mockKv as any, data);
+
+    const result = await processScheduledCheck(env);
+    expect(result.status).toBe('DEAD');
+    expect(result.dead_sent_at).not.toBeNull();
+    expect(env.EMAIL_SEND.send).toHaveBeenCalledTimes(1);
   });
 });
