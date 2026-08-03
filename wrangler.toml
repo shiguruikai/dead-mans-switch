@@ -4,6 +4,15 @@ compatibility_date = "2026-08-01"
 compatibility_flags = ["nodejs_compat"]
 assets = { directory = "./public" }
 
+[secrets]
+required = [
+  "PING_SECRET_TOKEN",
+  "OWNER_EMAIL_ADDRESS",
+  "KIN_EMAIL_ADDRESS",
+  "VAPID_PUBLIC_KEY",
+  "VAPID_PRIVATE_KEY",
+]
+
 [triggers]
 crons = ["0 0 * * *"]
 
