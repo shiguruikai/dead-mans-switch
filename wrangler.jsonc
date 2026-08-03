@@ -1,0 +1,38 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "dead-mans-switch",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-08-01",
+  "compatibility_flags": [
+    "nodejs_compat"
+  ],
+  "assets": {
+    "directory": "./public"
+  },
+  "triggers": {
+    "crons": [
+      "0 0 * * *"
+    ]
+  },
+  "kv_namespaces": [
+    {
+      "binding": "DMS_KV",
+      "id": "YOUR_KV_NAMESPACE_ID"
+    }
+  ],
+  "send_email": [
+    {
+      "name": "EMAIL_SEND"
+    }
+  ],
+  "vars": {
+    "BASE_URL": "https://dead-mans-switch.example.workers.dev",
+    "WARNING_DAYS": "7",
+    "DEAD_DAYS": "14",
+    "WARNING_EMAIL_SUBJECT": "【重要】Dead Man's Switch 生存確認リマインダー",
+    "WARNING_EMAIL_BODY": "アクティビティが途絶えています。生存確認を行う場合は以下のURLを開いてください:\n${BASE_URL}/checkin",
+    "DEAD_EMAIL_SUBJECT": "【重要通知】手続情報およびメッセージのご案内",
+    "VAPID_SUBJECT": "mailto:owner@example.com",
+    "SENDER_EMAIL_ADDRESS": "noreply@yourdomain.com"
+  }
+}

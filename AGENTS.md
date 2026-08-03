@@ -68,7 +68,7 @@ Cloudflare Workers + Hono + KV 上で稼働する、全自動不活動検知・�
 
 ## Gitルール
 
-- **コミットメッセージ**: `Conventional Commits` 形式（`<type>: <description>`）に準拠した簡潔な日本語。
+- **コミットメッセージ**: `Conventional Commits` 形式（`<type>: <description>`）に準拠し、`<description>` 部分は**簡潔な日本語**で記述すること（例: `feat: フェーズ1のプロジェクト基盤初期化および型定義の追加`）。
   - 主な type: `feat`, `fix`, `docs`, `refactor`, `test`, `build`, `ci`
 - **コミットタイミング**: 原則としてモジュール単位またはロードマップの各フェーズが完了し、型チェックおよび単体テストが成功した段階でコミット提案を行うこと。
 - **事前検証**: コミット前に必ず `pnpm exec tsc --noEmit` および `pnpm test` を実行すること。
