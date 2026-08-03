@@ -7,7 +7,7 @@ export async function sendEmail(
   env: Env,
   options: { to: string; subject: string; bodyTemplate: string },
 ): Promise<void> {
-  const formattedBody = options.bodyTemplate.replace(/\${BASE_URL}/g, env.BASE_URL);
+  const formattedBody = options.bodyTemplate.replaceAll('${BASE_URL}', env.BASE_URL);
 
   const msg = createMimeMessage();
   msg.setSender({ name: "Dead Man's Switch", addr: env.SENDER_EMAIL_ADDRESS });

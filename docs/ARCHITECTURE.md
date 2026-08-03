@@ -146,7 +146,7 @@ flowchart TD
 
 Cloudflare Workers の `send_email` バインディング（`env.EMAIL_SEND`）および `mimetext` を利用した送信処理。送信元アドレスには Cloudflare 上で自身が所有・管理（Email Routing 設定済み）しているカスタムドメインのアドレス `SENDER_EMAIL_ADDRESS`（例: `noreply@yourdomain.com`）を使用する。
 
-本関数（`sendEmail`）は一次警告メール（`WARNING_EMAIL_BODY`）および死後通知メール（`DEAD_EMAIL_BODY`）の両方の送信に使用され、本文テンプレート内にプレースホルダー `${BASE_URL}` が含まれている場合は `bodyTemplate.replace(/\${BASE_URL}/g, env.BASE_URL)` により動的置換を行って送信する。
+本関数（`sendEmail`）は一次警告メール（`WARNING_EMAIL_BODY`）および死後通知メール（`DEAD_EMAIL_BODY`）の両方の送信に使用され、本文テンプレート内にプレースホルダー `${BASE_URL}` が含まれている場合は `bodyTemplate.replaceAll('${BASE_URL}', env.BASE_URL)` により動的置換を行って送信する。
 
 ```typescript
 import { createMimeMessage } from 'mimetext';
@@ -154,7 +154,7 @@ import { EmailMessage } from 'cloudflare:email';
 
 export async function sendEmail(env: Env, options: { to: string; subject: string; bodyTemplate: string }) {
   // WARNING_EMAIL_BODY および DEAD_EMAIL_BODY の両方で ${BASE_URL} プレースホルダーを実際の環境変数 URL に置換
-  const formattedBody = options.bodyTemplate.replace(/\${BASE_URL}/g, env.BASE_URL);
+  const formattedBody = options.bodyTemplate.replaceAll('${BASE_URL}', env.BASE_URL);
 
   const msg = createMimeMessage();
   // Cloudflare Email Routing では自所有ドメインの SENDER_EMAIL_ADDRESS が必須
