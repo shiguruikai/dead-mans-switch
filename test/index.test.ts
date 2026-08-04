@@ -160,7 +160,15 @@ describe('Hono API Endpoints (src/index.ts)', () => {
     expect(html).not.toContain('pingBtn');
   });
 
-  it('POST /api/ping requires X-Ping-Token header', async () => {
+  it('POST /checkin/ping updates activity without X-Ping-Token (Access protected)', async () => {
+    const res = await app.request('/checkin/ping', { method: 'POST' }, env);
+    expect(res.status).toBe(200);
+    const body = await res.json<any>();
+    expect(body.success).toBe(true);
+    expect(body.status).toBe('NORMAL');
+  });
+
+  it('POST /api/ping requires X-Ping-Token header or Access Email header', async () => {
     const resUnauthorized = await app.request('/api/ping', { method: 'POST' }, env);
     expect(resUnauthorized.status).toBe(401);
 
@@ -188,7 +196,18 @@ describe('Hono API Endpoints (src/index.ts)', () => {
     expect(res.status).toBe(403);
   });
 
-  it('POST /api/push/subscribe stores subscription', async () => {
+  it('POST /api/push/subscribe stores subscription and validates format', async () => {
+    const resInvalid = await app.request(
+      '/api/push/subscribe',
+      {
+        method: 'POST',
+        headers: { 'X-Ping-Token': 'test-secret-token-123', 'Content-Type': 'application/json' },
+        body: JSON.stringify({ endpoint: 'http://example.com' }),
+      },
+      env,
+    );
+    expect(resInvalid.status).toBe(400);
+
     const sub: PushSubscription = {
       endpoint: 'https://push.example.com/test-endpoint',
       keys: { p256dh: 'p256', auth: 'auth' },
@@ -198,7 +217,7 @@ describe('Hono API Endpoints (src/index.ts)', () => {
       '/api/push/subscribe',
       {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'X-Ping-Token': 'test-secret-token-123', 'Content-Type': 'application/json' },
         body: JSON.stringify(sub),
       },
       env,
@@ -207,6 +226,28 @@ describe('Hono API Endpoints (src/index.ts)', () => {
     const body = await res.json<any>();
     expect(body.success).toBe(true);
     expect(body.total_devices).toBe(1);
+  });
+
+  it('DELETE /api/push/subscribe removes subscription', async () => {
+    const sub: PushSubscription = {
+      endpoint: 'https://push.example.com/test-endpoint',
+      keys: { p256dh: 'p256', auth: 'auth' },
+    };
+    await addPushSubscription(mockKv as any, sub);
+
+    const res = await app.request(
+      '/api/push/subscribe',
+      {
+        method: 'DELETE',
+        headers: { 'X-Ping-Token': 'test-secret-token-123', 'Content-Type': 'application/json' },
+        body: JSON.stringify({ endpoint: 'https://push.example.com/test-endpoint' }),
+      },
+      env,
+    );
+    expect(res.status).toBe(200);
+    const body = await res.json<any>();
+    expect(body.success).toBe(true);
+    expect(body.total_devices).toBe(0);
   });
 
   it('GET /api/status returns status details', async () => {
@@ -231,6 +272,15 @@ describe('Scheduled Cron Trigger (src/services/cron.ts)', () => {
     env = createMockEnv(mockKv);
   });
 
+  it('should validate WARNING_DAYS and DEAD_DAYS configuration', async () => {
+    env.WARNING_DAYS = 'invalid';
+    await expect(processScheduledCheck(env)).rejects.toThrow('WARNING_DAYS and DEAD_DAYS must be valid integers');
+
+    env.WARNING_DAYS = '14';
+    env.DEAD_DAYS = '7';
+    await expect(processScheduledCheck(env)).rejects.toThrow('WARNING_DAYS must be strictly less than DEAD_DAYS');
+  });
+
   it('should remain NORMAL if activity is recent', async () => {
     const result = await processScheduledCheck(env);
     expect(result.status).toBe('NORMAL');
@@ -239,9 +289,20 @@ describe('Scheduled Cron Trigger (src/services/cron.ts)', () => {
 
   it('should transition to WARNING when inactive >= 6.5 days (12h margin)', async () => {
     const data = await getSystemData(mockKv as any);
-    // 7 days - 12h = 6.5 days = 561,600 seconds. Set last_active_at to 7 days ago.
     const sevenDaysAgo = new Date(Date.now() - 7 * 86400 * 1000);
     data.last_active_at = sevenDaysAgo.toISOString();
+    await saveSystemData(mockKv as any, data);
+
+    const result = await processScheduledCheck(env);
+    expect(result.status).toBe('WARNING');
+    expect(result.warning_sent_at).not.toBeNull();
+    expect(env.EMAIL_SEND.send).toHaveBeenCalledTimes(1);
+  });
+
+  it('should retry warning notification if status is WARNING but warning_sent_at is null', async () => {
+    const data = await getSystemData(mockKv as any);
+    data.status = 'WARNING';
+    data.warning_sent_at = null;
     await saveSystemData(mockKv as any, data);
 
     const result = await processScheduledCheck(env);
@@ -256,6 +317,18 @@ describe('Scheduled Cron Trigger (src/services/cron.ts)', () => {
     data.last_active_at = fourteenDaysAgo.toISOString();
     data.status = 'WARNING';
     data.warning_sent_at = new Date(Date.now() - 7 * 86400 * 1000).toISOString();
+    await saveSystemData(mockKv as any, data);
+
+    const result = await processScheduledCheck(env);
+    expect(result.status).toBe('DEAD');
+    expect(result.dead_sent_at).not.toBeNull();
+    expect(env.EMAIL_SEND.send).toHaveBeenCalledTimes(1);
+  });
+
+  it('should retry dead notification if status is DEAD but dead_sent_at is null', async () => {
+    const data = await getSystemData(mockKv as any);
+    data.status = 'DEAD';
+    data.dead_sent_at = null;
     await saveSystemData(mockKv as any, data);
 
     const result = await processScheduledCheck(env);
