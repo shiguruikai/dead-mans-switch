@@ -1,11 +1,21 @@
 // Service Worker for Dead Man's Switch Web Push
 self.addEventListener('push', (event) => {
+  let title = "【Dead Man's Switch】生存確認リマインダー";
   let body = 'アクティビティの更新が確認されていません。生存確認を行ってください。';
+  let url = '/checkin';
+
   if (event.data) {
     try {
-      body = event.data.text();
+      const data = event.data.json();
+      if (data.title) title = data.title;
+      if (data.body) body = data.body;
+      if (data.url) url = data.url;
     } catch {
-      // fallback
+      try {
+        body = event.data.text();
+      } catch {
+        // fallback
+      }
     }
   }
 
@@ -15,16 +25,18 @@ self.addEventListener('push', (event) => {
     badge: '/favicon.ico',
     tag: 'dms-warning-notification',
     renotify: true,
+    data: { url: url },
   };
 
   event.waitUntil(
-    self.registration.showNotification('【Dead Man\'s Switch】生存確認リマインダー', options),
+    self.registration.showNotification(title, options),
   );
 });
 
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
+  const targetUrl = (event.notification.data && event.notification.data.url) || '/checkin';
   event.waitUntil(
-    clients.openWindow('/checkin'),
+    clients.openWindow(targetUrl),
   );
 });

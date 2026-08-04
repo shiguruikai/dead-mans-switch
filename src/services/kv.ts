@@ -4,21 +4,24 @@ import type { PushSubscription, SystemData } from '../types';
 
 const KV_KEY = 'system_data';
 
-export const DEFAULT_SYSTEM_DATA: SystemData = {
-  status: 'NORMAL',
-  last_active_at: new Date().toISOString(),
-  warning_sent_at: null,
-  dead_sent_at: null,
-  push_subscriptions: [],
-};
+export const MAX_PUSH_SUBSCRIPTIONS = 20;
+
+export function getDefaultSystemData(): SystemData {
+  return {
+    status: 'NORMAL',
+    last_active_at: new Date().toISOString(),
+    warning_sent_at: null,
+    dead_sent_at: null,
+    push_subscriptions: [],
+  };
+}
+
+export const DEFAULT_SYSTEM_DATA: SystemData = getDefaultSystemData();
 
 export async function getSystemData(kv: KVNamespace): Promise<SystemData> {
   const data = await kv.get<SystemData>(KV_KEY, 'json');
   if (!data) {
-    const initialData: SystemData = {
-      ...DEFAULT_SYSTEM_DATA,
-      last_active_at: new Date().toISOString(),
-    };
+    const initialData: SystemData = getDefaultSystemData();
     await saveSystemData(kv, initialData);
     return initialData;
   }
@@ -60,6 +63,9 @@ export async function addPushSubscription(
     updatedSubs = [...current.push_subscriptions];
     updatedSubs[existingIndex] = subscription;
   } else {
+    if (current.push_subscriptions.length >= MAX_PUSH_SUBSCRIPTIONS) {
+      throw new Error(`Push subscriptions limit exceeded (max ${MAX_PUSH_SUBSCRIPTIONS.toString()})`);
+    }
     updatedSubs = [...current.push_subscriptions, subscription];
   }
 

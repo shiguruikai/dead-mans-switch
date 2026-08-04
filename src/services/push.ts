@@ -9,10 +9,16 @@ export interface PushResult {
   error?: unknown;
 }
 
+export interface PushPayload {
+  title?: string;
+  body?: string;
+  url?: string;
+}
+
 export async function sendNotification(
   env: Env,
   subscription: PushSubscription,
-  payload: string,
+  payload: string | PushPayload,
 ): Promise<PushResult> {
   const options: webpush.RequestOptions = {
     vapidDetails: {
@@ -22,8 +28,10 @@ export async function sendNotification(
     },
   };
 
+  const payloadString = typeof payload === 'string' ? payload : JSON.stringify(payload);
+
   try {
-    const res = await webpush.sendNotification(subscription, payload, options);
+    const res = await webpush.sendNotification(subscription, payloadString, options);
     return {
       endpoint: subscription.endpoint,
       success: true,
@@ -43,7 +51,7 @@ export async function sendNotification(
 export async function sendNotificationToAll(
   env: Env,
   subscriptions: PushSubscription[],
-  payload: string,
+  payload: string | PushPayload,
 ): Promise<PushResult[]> {
   return Promise.all(
     subscriptions.map((sub) => sendNotification(env, sub, payload)),

@@ -39,6 +39,7 @@ export interface Env {
   WARNING_EMAIL_SUBJECT: string;
   WARNING_EMAIL_BODY: string;
   DEAD_EMAIL_SUBJECT: string;
+  DEAD_EMAIL_BODY?: string;
   VAPID_SUBJECT: string;
   SENDER_EMAIL_ADDRESS: string;
 
@@ -46,7 +47,6 @@ export interface Env {
   PING_SECRET_TOKEN: string;
   OWNER_EMAIL_ADDRESS: string;
   KIN_EMAIL_ADDRESS: string;
-  DEAD_EMAIL_BODY?: string;
   VAPID_PUBLIC_KEY: string;
   VAPID_PRIVATE_KEY: string;
 }
