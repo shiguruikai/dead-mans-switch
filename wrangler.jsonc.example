@@ -27,12 +27,18 @@
   ],
   "vars": {
     "BASE_URL": "https://dead-mans-switch.example.workers.dev",
+    "SENDER_EMAIL_ADDRESS": "noreply@yourdomain.com",
+    "VAPID_SUBJECT": "mailto:owner@example.com",
+    "OWNER_EMAIL_ADDRESS": "owner@example.com",
+    "KIN_EMAIL_ADDRESS": "kin@example.com",
+    "PING_SECRET_TOKEN": "YOUR_RANDOM_PING_SECRET_TOKEN",
+    "VAPID_PUBLIC_KEY": "YOUR_VAPID_PUBLIC_KEY",
+    "VAPID_PRIVATE_KEY": "YOUR_VAPID_PRIVATE_KEY",
     "WARNING_DAYS": "7",
     "DEAD_DAYS": "14",
     "WARNING_EMAIL_SUBJECT": "【重要】Dead Man's Switch 生存確認リマインダー",
     "WARNING_EMAIL_BODY": "アクティビティが途絶えています。生存確認を行う場合は以下のURLを開いてください:\n${BASE_URL}/checkin",
     "DEAD_EMAIL_SUBJECT": "【重要通知】手続情報およびメッセージのご案内",
-    "VAPID_SUBJECT": "mailto:owner@example.com",
-    "SENDER_EMAIL_ADDRESS": "noreply@yourdomain.com"
+    "DEAD_EMAIL_BODY": ""
   }
 }

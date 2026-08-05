@@ -1,12 +1,10 @@
 # AGENTS.md
 
-本リポジトリで開発・保守を行う AI エージェント向けの統合ガイドラインです。
+## Dead Man's Switch プロジェクト概要
 
-## プロジェクト概要
+Cloudflare Workers 上で稼働する、個人専用のセルフホスト型死後通知システムです。
 
-Cloudflare Workers + Hono + KV 上で稼働する、全自動不活動検知・死後通知システム（セルフホスト型・本人専用）です。
-
-日常のアクセスからアクティビティを自動検知（パッシブハートビート）し、規定の不活動期間（デフォルト: 14日）経過時に指定宛先へ死後通知（メッセージ・手続案内）を自動送信します。手動での状況確認・復帰は Cloudflare Zero Trust (Access) で保護された `/checkin` ページから安全に行えます。
+指定した期間アクセスや更新がない場合、死後通知のメールを事前に設定した送信先へ自動送信します。手動での生存報告や状況確認は Cloudflare Zero Trust (Access) で保護された `/checkin` 画面から安全に行えます。
 
 ## 技術スタック
 
@@ -16,9 +14,9 @@ Cloudflare Workers + Hono + KV 上で稼働する、全自動不活動検知・�
 - **ストレージ・定時実行**: Cloudflare KV (`DMS_KV`), Cloudflare Cron Triggers (`0 0 * * *`)
 - **認証・アクセス制御**: Cloudflare Zero Trust (Access)（`/checkin` ページの Google Login / Passkey 認証）
 - **通知機能**:
-  - **本人警告**: Cloudflare Email Send + Web Push（`web-push`, VAPID, Service Worker `public/sw.js`）※複数端末同時一括配信対応
+  - **生存確認リマインダー**: Cloudflare Email Send + Web Push（`web-push`, VAPID, Service Worker `public/sw.js`）※複数端末同時一括配信対応
   - **死後通知**: Cloudflare Email Send（`EmailMessageBuilder`, `SENDER_EMAIL_ADDRESS`）
-- **品質・テスト・ツール**: Vitest (`@cloudflare/vitest-pool-workers`), ESLint (v10, Flat Config, `@stylistic`), Wrangler (v4)
+- **品質・テスト・ツール**: Vitest (@cloudflare/vitest-pool-workers), ESLint (v10, Flat Config, @stylistic), Wrangler (v4)
 
 ## コマンド
 
@@ -26,11 +24,9 @@ Cloudflare Workers + Hono + KV 上で稼働する、全自動不活動検知・�
 - `pnpm dev`: Wrangler によるローカル開発サーバー起動 (`wrangler dev`)
 - `pnpm typecheck`: 型定義自動生成（`cf-typegen`）および TypeScript 型チェック (`tsc --noEmit`)
 - `pnpm lint`: ESLint によるコード静的解析
-- `pnpm lint:fix`: ESLint による自動修復
 - `pnpm test`: Vitest による全単体テスト実行
 - `pnpm deploy`: Cloudflare Workers への本番デプロイ
-- `pnpm wrangler kv:namespace create DMS_KV`: KV ネームスペースの作成
-- `pnpm wrangler secret put <KEY>`: シークレット環境変数の設定
+- `pnpm wrangler kv namespace create DMS_KV`: KV ネームスペースの作成
 
 ## 設計・開発ルール
 
@@ -38,11 +34,11 @@ Cloudflare Workers + Hono + KV 上で稼働する、全自動不活動検知・�
 
 作業対象に応じた関連ドキュメントを参照・更新すること。
 
-| 作業対象・変更内容                            | 参照・更新すべきドキュメント            |
-| :-------------------------------------------- | :-------------------------------------- |
-| **全般的な要件・ステート遷移の変更**          | [REQUIREMENTS.md](docs/REQUIREMENTS.md) |
+| 作業対象・変更内容 | 参照・更新すべきドキュメント |
+| :--- | :--- |
+| **全般的な要件・ステート遷移の変更** | [REQUIREMENTS.md](docs/REQUIREMENTS.md) |
 | **アーキテクチャ・API・KV設計・設定等の変更** | [ARCHITECTURE.md](docs/ARCHITECTURE.md) |
-| **概要・セットアップ・デプロイ手順の変更**    | [README.md](README.md)                  |
+| **概要・セットアップ・デプロイ手順の変更** | [README.md](README.md) |
 
 ### 2. ドキュメント記述ルール
 
@@ -71,4 +67,4 @@ Cloudflare Workers + Hono + KV 上で稼働する、全自動不活動検知・�
 ## 禁止事項
 
 - **不要な検証コマンド実行の禁止**: 変更ファイルが Markdown（`*.md`）のみの場合、型チェック・ビルド・テスト等のコマンドを実行しないこと。
-- **秘密情報のハードコーディング禁止**: API トークン等のシークレットをソースコードや設定ファイルに直書きしないこと。
+- **秘密情報のGitコミット禁止**: API トークン等の機密情報を Git 管理対象ファイル（wrangler.jsonc.example 等）に直接含めないこと。
