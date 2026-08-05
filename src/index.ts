@@ -18,16 +18,14 @@ const authMiddleware = async (c: Context<{ Bindings: Env }>, next: () => Promise
   const token = c.req.header('X-Ping-Token');
   const cfEmail = c.req.header('Cf-Access-Authenticated-User-Email');
 
-  if (cfEmail || (token && token === c.env.PING_SECRET_TOKEN)) {
+  const isDev = process.env.NODE_ENV === 'development';
+
+  if (cfEmail || (token && token === c.env.PING_SECRET_TOKEN) || isDev) {
     await next();
     return;
   }
 
-  if (!token || token !== c.env.PING_SECRET_TOKEN) {
-    return c.json({ error: 'Unauthorized' }, 401);
-  }
-
-  await next();
+  return c.json({ error: 'Unauthorized' }, 401);
 };
 
 // 1. GET /checkin (Zero Trust protected)
