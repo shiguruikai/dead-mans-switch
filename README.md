@@ -2,7 +2,7 @@
 
 Cloudflare Workers 上で稼働する、個人専用のセルフホスト型死後通知システムです。
 
-指定した期間アクセスや更新がない場合、死後通知のメールを事前に設定した送信先へ自動送信します。手動での生存報告や状況確認は Cloudflare Zero Trust (Access) で保護された `/checkin` 画面から安全に行えます。
+指定した期間アクセスや更新がない場合、死後通知のメールを事前に設定した送信先へ自動送信します。手動での生存報告や状況確認は Cloudflare Zero Trust（Access）で保護された `/checkin` 画面から安全に行えます。
 
 ## 📚 ドキュメント
 
@@ -95,7 +95,7 @@ Cloudflare Workers 上で稼働する、個人専用のセルフホスト型死�
 ### 3. 検証 ＆ デプロイ
 
 ```bash
-# 1. 型チェック・リント・テスト実行
+# 1. 型チェック・リント・テスト
 pnpm typecheck
 pnpm lint
 pnpm test
@@ -104,14 +104,18 @@ pnpm test
 pnpm deploy
 ```
 
-### 4. デプロイ後の設定 ＆ 初期化
+### 4. デプロイ後の設定
 
-1. **Cloudflare Zero Trust (Access) によるアクセス保護**
-   - Cloudflare Dashboard > **Zero Trust** > **Access** > **Applications** で新規 Application を作成。
-   - Application Path: `https://<YOUR_WORKER_DOMAIN>/checkin`
-   - Policy: Allow / Emails に `OWNER_EMAIL_ADDRESS`（本人通知先）のみ許可するポリシーを設定。
+1. **Cloudflare Zero Trust によるアクセス保護**
+   - Cloudflare Dashboard > **Zero Trust** > **Access controls** > **Applications** で `Create new application` ボタンをクリックします。
+   - Destinations:
+      - Public hostnames: `<YOUR_WORKER_DOMAIN>/checkin`
+   - Access policies:
+      - `OWNER_EMAIL_ADDRESS`（本人通知先）のみ許可するポリシーを設定、または、定義済みポリシーの「Allow My Email」等を選択します。
+   - `Create` ボタンをクリックします。
 2. **初回 Web Push 購読設定**
-   - デプロイ後に `https://<YOUR_WORKER_DOMAIN>/checkin` へアクセス（Zero Trust 認証を通過）し、「通知を許可」ボタンを押してブラウザの通知受信設定を行います。
+   - `https://<YOUR_WORKER_DOMAIN>/checkin` へアクセスし、Zero Trust 認証を通過してください。
+   - 「この端末の Web Push 通知を許可」ボタンをクリックし、表示された「通知を許可」ボタンをクリックします。
 3. **環境変数の変更手順（運用開始後）**
    - [wrangler.jsonc](wrangler.jsonc) 内の `vars` の値を編集し、`pnpm deploy` を再実行するだけで簡単に更新できます。
    - ※ Cloudflare Dashboard > **Workers & Pages** > 本 Worker > **Settings** > **Variables and Secrets** からブラウザ上で直接編集することも可能です。
@@ -130,9 +134,8 @@ pnpm test
 
 > **[!IMPORTANT]**
 >
-> - **Cloudflare Email Send（完全無料 $0）**: 送信先メールアドレス（死後通知先 `KIN_EMAIL_ADDRESS` および本人通知先 `OWNER_EMAIL_ADDRESS`）は、あらかじめ Cloudflare Dashboard > **Email Routing** > **Destination Addresses** で事前登録・受信承認（Verify）を済ませておいてください。Cloudflare の仕様により、**事前認証済みの Destination Address 宛てへのメール送信は Workers Free プランを含む全プランで完全無料（$0・クォータ制限なし）** で利用できます。また、送信元として所有ドメインの `SENDER_EMAIL_ADDRESS` を `wrangler.jsonc` に指定してください。
-> - **ドメイン維持・クレカ解約リスクへの対策（最悪の想定）**: 本人が死亡した際、親族がクレジットカードを解約または口座を凍結することで、ドメインの自動更新が失敗し死後通知前にドメインが失効するリスクがあります。不活動期間（`DEAD_DAYS`）を2ヶ月以上の長期に設定する場合は、**ドメインを5年〜10年分まとめて前払い（一括更新）しておくか、不活動期間を30日以内に設定する運用**を強く推奨します。
-> - **Cloudflare Zero Trust**: デプロイ後、Cloudflare Dashboard > **Zero Trust** > **Access** > **Applications** で `/checkin` パスに対し本人のメールアドレスのみ許可するポリシーを設定してください。
+> - **無料でメール送信**: 送信先メールアドレスは、あらかじめ Cloudflare Dashboard > **Email Routing** > **Destination Addresses** で事前登録・受信承認（Verify）を済ませる必要があります。Cloudflare の仕様により、**事前認証済みの Destination Address 宛てへのメール送信は Workers Free プランを含む全プランで完全無料** で利用できます。
+> - **【最悪の想定】クレカ解約によるドメイン自動解約リスクへの対策**: 本人が死亡した際、親族がクレジットカードを解約または口座を凍結することで、ドメインの自動更新が失敗し、死後通知前にドメインが失効するリスクがあります。不活動期間（`DEAD_DAYS`）を2ヶ月以上の長期に設定する場合は、**ドメインを5年〜10年分まとめて前払い（一括更新）しておくか、不活動期間を30日以内に設定する運用**を推奨します。
 
 ## 📄 ライセンス
 

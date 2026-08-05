@@ -4,7 +4,7 @@
 
 Cloudflare Workers 上で稼働する、個人専用のセルフホスト型死後通知システムです。
 
-指定した期間アクセスや更新がない場合、死後通知のメールを事前に設定した送信先へ自動送信します。手動での生存報告や状況確認は Cloudflare Zero Trust (Access) で保護された `/checkin` 画面から安全に行えます。
+指定した期間アクセスや更新がない場合、死後通知のメールを事前に設定した送信先へ自動送信します。手動での生存報告や状況確認は Cloudflare Zero Trust で保護された `/checkin` 画面から安全に行えます。
 
 ## 技術スタック
 
@@ -12,7 +12,7 @@ Cloudflare Workers 上で稼働する、個人専用のセルフホスト型死�
 - **フレームワーク**: Hono (v4.x)
 - **パッケージ管理**: pnpm
 - **ストレージ・定時実行**: Cloudflare KV (`DMS_KV`), Cloudflare Cron Triggers (`0 0 * * *`)
-- **認証・アクセス制御**: Cloudflare Zero Trust (Access)（`/checkin` ページの Google Login / Passkey 認証）
+- **認証・アクセス制御**: Cloudflare Zero Trust（`/checkin` ページの Google Login / Passkey 認証）
 - **通知機能**:
   - **生存確認リマインダー**: Cloudflare Email Send + Web Push（`web-push`, VAPID, Service Worker `public/sw.js`）※複数端末同時一括配信対応
   - **死後通知**: Cloudflare Email Send（`EmailMessageBuilder`, `SENDER_EMAIL_ADDRESS`）

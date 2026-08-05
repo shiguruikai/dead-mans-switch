@@ -6,7 +6,7 @@
 | :--- | :--- | :--- |
 | **開発言語** | TypeScript (v6.x) | 型安全な Worker 実装 |
 | **フレームワーク** | Hono (v4.x) | 軽量 Web フレームワーク |
-| **認証・アクセス制御** | Cloudflare Zero Trust (Access) | `/checkin` ページの本人認証・保護（Google/Passkey） |
+| **認証・アクセス制御** | Cloudflare Zero Trust | `/checkin` ページの本人認証・保護（Google/Passkey） |
 | **実行基盤** | Cloudflare Workers | サーバーレスランタイム (Wrangler v4, `nodejs_compat`) |
 | **静的アセット配信** | Cloudflare Workers Static Assets | `public/sw.js` (Service Worker) の静的自動配信 |
 | **ストレージ** | Cloudflare KV (`DMS_KV`) | 状態・タイムスタンプ・複数端末 Web Push サブスク保存 |
@@ -53,11 +53,11 @@ dead-mans-switch/
 | `dead_sent_at` | ISO 8601 文字列 \| `null` | 死後通知送信成功日時（リトライ判定用） |
 | `push_subscriptions` | JSON 配列 (`PushSubscription[]`) | 登録済み複数端末の Web Push 購読情報リスト |
 
-## 4. エンドポイント & Cloudflare Zero Trust ルーティング設計
+## 4. エンドポイント & Cloudflare Zero Trust 設計
 
-### 4.1. Access ルーティング定義
+### 4.1. Access controls
 
-Cloudflare Dashboard > **Zero Trust** > **Access** 設定にて以下のルールを適用します。
+Cloudflare Dashboard > **Zero Trust** > **Access controls** 設定にて以下のルールを適用します。
 
 | パス / エンドポイント | 認証制御 | 詳細 |
 | :--- | :--- | :--- |
@@ -74,7 +74,7 @@ Cloudflare Dashboard > **Zero Trust** > **Access** 設定にて以下のルー�
 
 #### 1. `GET /checkin`（生存確認・ステータス確認画面）
 
-- **認証**: Cloudflare Zero Trust (Access)
+- **認証**: Cloudflare Zero Trust
 - **処理**:
   - `status === "DEAD"` の場合: 「死後処理完了済み（システムロックアウト中）」のメッセージ画面を返却し、復帰ボタン・Web Push 登録操作を完全に無効化する。
   - `status !== "DEAD"` の場合: 現在のステータス（`status`）、最終アクティブ日時（`last_active_at`）、警告までの経過日数、Web Push 購読状況を表示する HTML 画面を返却。
@@ -85,7 +85,7 @@ Cloudflare Dashboard > **Zero Trust** > **Access** 設定にて以下のルー�
 
 #### 2. `POST /checkin/ping`（ダッシュボード手動生存報告）
 
-- **認証**: Cloudflare Zero Trust (Access 認証内)
+- **認証**: Cloudflare Zero Trust
 - **処理**:
   1. `status === "DEAD"` の場合は `403 Forbidden` (`{"error": "System locked out (status is DEAD)"}`) を返却。
   2. `last_active_at` を現在時刻に更新。
@@ -104,7 +104,7 @@ Cloudflare Dashboard > **Zero Trust** > **Access** 設定にて以下のルー�
 
 #### 4. `POST /api/push/subscribe`（Web Push サブスクリプション保存・複数端末対応）
 
-- **認証**: Cloudflare Zero Trust (Access) / ヘッダー認証
+- **認証**: Cloudflare Zero Trust / ヘッダー認証
 - **処理**:
   1. 受信した `PushSubscription` オブジェクトを取得。
   2. KV の `push_subscriptions`（配列）を取得。既存の配列内に同 `endpoint` が存在すれば最新データに更新し、存在しなければ配列に追加（最大20件制限）。
@@ -113,7 +113,7 @@ Cloudflare Dashboard > **Zero Trust** > **Access** 設定にて以下のルー�
 
 #### 5. `DELETE /api/push/subscribe`（Web Push サブスクリプション削除）
 
-- **認証**: Cloudflare Zero Trust (Access) / ヘッダー認証
+- **認証**: Cloudflare Zero Trust / ヘッダー認証
 - **処理**:
   1. 受信した JSON 内の `endpoint` を取得。
   2. KV の `push_subscriptions` 配列から対象 `endpoint` のサブスクリプションを削除して KV を更新。

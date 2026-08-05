@@ -5,7 +5,7 @@
 本システムは、アクティビティをパッシブ（受動的）に自動監視し、一定期間の不活動が検知された際に死後通知先メールアドレスへ死後通知（メッセージ・開示案内）を自動送信する Cloudflare Workers ベースの無償・永続型セルフホストサービス（本人専用）です。
 
 1. **手間ゼロの受動検知**: 開発作業（Git push / ターミナル操作）やスマホ自動連携からのアクティビティを自動記録し、生存確認操作を不要にする。
-2. **クラウド認証による安全な手動確認**: Cloudflare Zero Trust (Access) により保護された専用 Web ページ（`/checkin`）から、いつでも安全に最終生存状態の確認・手動復帰が行える。
+2. **クラウド認証による安全な手動確認**: Cloudflare Zero Trust により保護された専用 Web ページ（`/checkin`）から、いつでも安全に最終生存状態の確認・手動復帰が行える。
 3. **生存確認リマインダー & 死後通知（二段階通知）**: 不活動検知時（デフォルト: 7日目）は本人通知先メールアドレス（`OWNER_EMAIL_ADDRESS`）宛てのメールおよび登録された全端末（スマートフォンや PC の Web Push 対応ブラウザ）への Web Push で生存確認リマインダーを同時送信。通知タップ時は Zero Trust 保護された `/checkin` ページが開き安全に復帰できる。通算不活動期間（デフォルト: 14日目）経過時に死後通知先メールアドレス（`KIN_EMAIL_ADDRESS`）宛てへ死後通知メールを安全に送信する。
 
 ## 2. アーキテクチャ・ステート定義
@@ -52,7 +52,7 @@ stateDiagram-v2
 ## 4. 非機能要件
 
 1. **永続性・コスト**: Cloudflare Workers + KV を使用し、完全無料枠で無期限に安定稼働すること。※ Cloudflare Email Send において、あらかじめ Cloudflare Dashboard > **Email Routing** > **Destination Addresses** にて事前認証（Verify）を完了させた送信先メールアドレス（本人通知先 `OWNER_EMAIL_ADDRESS` および死後通知先 `KIN_EMAIL_ADDRESS`）へのメール送信は、Workers Free プランを含む全プランで**完全無料かつ送信数上限のカウント対象外**として利用可能。
-2. **セキュリティ**: `/checkin` ページは Cloudflare Zero Trust (Access) で保護し、外部からの誤操作・クローラーアクセスを100%遮断すること。APIトークン、Web Push 秘密鍵、送信元メールアドレス・送信先メールアドレス、死後通知本文は Wrangler Secrets / 環境変数で分離保護すること。
+2. **セキュリティ**: `/checkin` ページは Cloudflare Zero Trust で保護し、外部からの誤操作・クローラーアクセスを100%遮断すること。APIトークン、Web Push 秘密鍵、送信元メールアドレス・送信先メールアドレス、死後通知本文は Wrangler Secrets / 環境変数で分離保護すること。
 3. **品質保証**: Vitest (@cloudflare/vitest-pool-workers) によるローカル自動テスト環境を含むこと。
 
 ## 5. 運用上のリスク・最悪の想定への対策（ドメイン維持）
