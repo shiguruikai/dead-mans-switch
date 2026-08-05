@@ -6,7 +6,7 @@
 | :--------------------- | :------------------------------------ | :------------------------------------------------------ |
 | **開発言語**           | TypeScript (v6.x)                     | 型安全なWorker実装                                      |
 | **フレームワーク**     | Hono (v4.x)                           | 軽量Webフレームワーク                                   |
-| **認証・アクセス制御** | Cloudflare Zero Trust (Access)        | `/checkin` Web ページの本人認証・保護（Google/Passkey） |
+| **認証・アクセス制御** | Cloudflare Zero Trust (Access)        | `/checkin` ページの本人認証・保護（Google/Passkey）     |
 | **実行基盤**           | Cloudflare Workers                    | サーバーレスランタイム (Wrangler v4, `nodejs_compat`)   |
 | **静的アセット配信**   | Cloudflare Workers Static Assets      | `public/sw.js` (Service Worker) の静的自動配信          |
 | **ストレージ**         | Cloudflare KV (`DMS_KV`)              | 状態・タイムスタンプ・複数端末 Web Push サブスク保存    |
@@ -15,8 +15,6 @@
 | **死後通知**           | Cloudflare Email Send (Email Routing) | 親族宛て死後通知自動送信                                |
 | **テスト**             | Vitest + Workers Pool                 | 状態遷移・API自動テスト                                 |
 
----
-
 ## 2. ディレクトリ構成
 
 ```text
@@ -24,8 +22,7 @@ dead-mans-switch/
 ├── README.md                 # 概要と環境構築・デプロイ手順
 ├── docs/
 │   ├── REQUIREMENTS.md       # 要件定義書
-│   ├── ARCHITECTURE.md       # アーキテクチャ・詳細設計書（本書）
-│   └── 進め方.md             # 実装ロードマップと進め方ガイド
+│   └── ARCHITECTURE.md       # アーキテクチャ・詳細設計書（本書）
 ├── package.json              # 依存関係定義
 ├── tsconfig.json             # TypeScript設定
 ├── wrangler.jsonc            # 設定・非機密環境変数（Cloudflare 推奨形式）
@@ -46,8 +43,6 @@ dead-mans-switch/
     └── index.test.ts         # 自動テスト
 ```
 
----
-
 ## 3. KV データ設計（`DMS_KV`）
 
 | キー                 | 型 / 値の範囲                         | 説明                                       |
@@ -58,13 +53,11 @@ dead-mans-switch/
 | `dead_sent_at`       | ISO 8601 文字列 \| `null`             | 死後通知送信成功日時（リトライ判定用）     |
 | `push_subscriptions` | JSON 配列 (`PushSubscription[]`)      | 登録済み複数端末の Web Push 購読情報リスト |
 
----
-
 ## 4. エンドポイント & Cloudflare Zero Trust ルーティング設計
 
 ### 4.1. Access ルーティング定義
 
-Cloudflare Dashboard の Zero Trust > Access 設定にて以下のルールを適用します。
+Cloudflare Dashboard > **Zero Trust** > **Access** 設定にて以下のルールを適用します。
 
 | パス / エンドポイント            | 認証制御                       | 詳細                                                                      |
 | :------------------------------- | :----------------------------- | :------------------------------------------------------------------------ |
@@ -83,11 +76,11 @@ Cloudflare Dashboard の Zero Trust > Access 設定にて以下のルールを�
 
 - **認証**: Cloudflare Zero Trust (Access)
 - **処理**:
-  - `status === "DEAD"` の場合: 「死後処理完了済み（システムロックアウト中）」のメッセージ画面を返却し、復帰ボタン・Push登録操作を完全に無効化する。
+  - `status === "DEAD"` の場合: 「死後処理完了済み（システムロックアウト中）」のメッセージ画面を返却し、復帰ボタン・Web Push 登録操作を完全に無効化する。
   - `status !== "DEAD"` の場合: 現在のステータス（`status`）、最終アクティブ日時（`last_active_at`）、警告までの経過日数、Web Push 購読状況を表示する HTML 画面を返却。
     - 「手動生存報告（アクティビティ更新）」ボタン押下で `POST /checkin/ping` を呼び出し `NORMAL` へ復帰・`last_active_at` を更新。
-    - 「この端末の Web Push 通知を許可 / 更新」ボタンで Web Push サブスクリプションを取得し `POST /api/push/subscribe` へ送信。
-    - 「この端末の Web Push 通知登録を解除」ボタンで `DELETE /api/push/subscribe` へ送信。
+    - 「この端末の Web Push 通知を許可 / 更新」ボタン押下で Web Push サブスクリプションを取得し `POST /api/push/subscribe` へ送信。
+    - 「この端末の Web Push 通知登録を解除」ボタン押下で `DELETE /api/push/subscribe` へ送信。
 - **レスポンス**: `200 OK` (Content-Type: `text/html; charset=utf-8`)
 
 #### 2. `POST /checkin/ping`（ダッシュボード手動生存報告）
@@ -114,7 +107,7 @@ Cloudflare Dashboard の Zero Trust > Access 設定にて以下のルールを�
 - **認証**: Cloudflare Zero Trust (Access) / ヘッダー認証
 - **処理**:
   1. 受信した `PushSubscription` オブジェクトを取得。
-  2. KV の `push_subscriptions` (配列) を取得。既存の配列内に同 `endpoint` が存在すれば最新データに更新し、存在しなければ配列に追加（最大20件制限）。
+  2. KV の `push_subscriptions`（配列）を取得。既存の配列内に同 `endpoint` が存在すれば最新データに更新し、存在しなければ配列に追加（最大20件制限）。
   3. 更新された配列を KV に保存。
 - **レスポンス**: `200 OK` (`{"success": true, "total_devices": 2}`)
 
@@ -131,8 +124,6 @@ Cloudflare Dashboard の Zero Trust > Access 設定にて以下のルールを�
 - **認証**: ヘッダー `X-Ping-Token: <PING_SECRET_TOKEN>` または Access 認証
 - **レスポンス**: `200 OK` (`{"status": "NORMAL", "days_since_active": 0.5, ...}`)
 
----
-
 ## 5. 定期実行処理（Cron Trigger）と状態遷移
 
 Cron 実行時刻とハートビート送信時刻の誤差による判定遅延を防ぐため、一次警告（`WARNING_DAYS * 86400 - 43200` 秒）および死後処理（`DEAD_DAYS * 86400 - 43200` 秒）の両方に **12時間マージン** を適用する。
@@ -141,102 +132,48 @@ Web Push 送信時には登録されている全端末（`push_subscriptions`）
 
 ```mermaid
 flowchart TD
-    Start["Cron Trigger（日次 00:00 UTC）"] --> Fetch["KV状態取得"]
-    Fetch --> CheckStatus{"status？"}
+    Start["Cron Trigger（日次 00:00 UTC）"] --> Fetch["KV 状態取得"]
+    Fetch --> CheckStatus{"status 判定"}
 
-    CheckStatus -->|"NORMAL"| DiffW{"now - last_active_at\n>= WARNING_DAYS (12hマージン込)？"}
+    CheckStatus -->|"NORMAL"| DiffW{"now - last_active_at\n>= WARNING_DAYS（12時間マージン込）"}
     DiffW -->|"No"| End["終了"]
-    DiffW -->|"Yes"| ActionW["1. status=WARNING に更新\n2. メール + 全端末Web Push 警告一括送信\n3. 無効端末(410/404)をKVから自動削除クリーンアップ\n4. 成功時 warning_sent_at 記録"]
+    DiffW -->|"Yes"| ActionW["1. status=WARNING に更新\n2. メール + 全端末 Web Push 警告一括送信\n3. 無効端末（410/404）を KV から自動削除クリーンアップ\n4. 成功時 warning_sent_at 記録"]
 
-    CheckStatus -->|"WARNING"| DiffD{"now - last_active_at >= DEAD_DAYS (12hマージン込)\nかつ warning_sent_at !== null？"}
-    DiffD -->|"No"| CheckWRetry{"warning_sent_at === null？"}
-    CheckWRetry -->|"Yes (前回失敗)"| ActionW
+    CheckStatus -->|"WARNING"| DiffD{"now - last_active_at >= DEAD_DAYS（12時間マージン込）\nかつ warning_sent_at !== null"}
+    DiffD -->|"No"| CheckWRetry{"warning_sent_at === null"}
+    CheckWRetry -->|"Yes（前回失敗）"| ActionW
     CheckWRetry -->|"No"| End
-    DiffD -->|"Yes (警告送信完了済み)"| ActionD["1. status=DEAD 更新\n2. 親族へ SENDER_EMAIL_ADDRESS より死後通知送信\n3. 成功時 dead_sent_at 記録"]
+    DiffD -->|"Yes（警告送信完了済み）"| ActionD["1. status=DEAD 更新\n2. 親族へ SENDER_EMAIL_ADDRESS より死後通知送信\n3. 成功時 dead_sent_at 記録"]
 
-    CheckStatus -->|"DEAD"| CheckDeadRetry{"dead_sent_at === null？"}
-    CheckDeadRetry -->|"Yes (前回失敗)"| ActionD
-    CheckDeadRetry -->|"No"| End["終了 (ロックアウト中)"]
+    CheckStatus -->|"DEAD"| CheckDeadRetry{"dead_sent_at === null"}
+    CheckDeadRetry -->|"Yes（前回失敗）"| ActionD
+    CheckDeadRetry -->|"No"| End["終了（ロックアウト中）"]
     ActionW --> End
     ActionD --> End
 ```
 
----
-
 ## 6. メール送信モジュール設計
 
-Cloudflare Workers の `send_email` バインディング（`env.EMAIL_SEND`）および構造化オブジェクト `EmailMessageBuilder` を利用した送信処理。送信元アドレスには Cloudflare 上で自身が所有・管理（Email Routing 設定済み）しているカスタムドメインのアドレス `SENDER_EMAIL_ADDRESS`（例: `noreply@yourdomain.com`）を使用する。
+Cloudflare Workers の `send_email` バインディング（`env.EMAIL_SEND`）を利用したメール送信モジュールです。具体的な実装コードについては [src/services/email.ts](../src/services/email.ts) を参照してください。
 
-※ **完全無料（$0）稼働の仕様**: 送信先アドレス（`to`）に、Cloudflare Dashboard（Email Routing > Destination addresses）にて事前認証（Verify）が完了しているアドレス（`KIN_EMAIL_ADDRESS` / `OWNER_EMAIL_ADDRESS`）を指定して送信する場合、Workers Free プランを含むすべてのプランで**完全無料（$0）かつクォータ制限対象外**で直接送信可能。
+- **送信元アドレス**: Cloudflare 上で所有・管理（Email Routing 設定済み）しているカスタムドメインのアドレス `SENDER_EMAIL_ADDRESS`（例: `noreply@yourdomain.com`）を使用します。
+- **完全無料（$0）仕様**: Cloudflare Dashboard > **Email Routing** > **Destination addresses** にて事前認証（Verify）が完了しているアドレス（`KIN_EMAIL_ADDRESS` / `OWNER_EMAIL_ADDRESS`）宛てに送信する場合、Workers Free プランを含むすべてのプランで送信数上限のカウント対象外（完全無料）で直接送信可能です。
+- **単一責任設計**: `sendEmail` 関数は `env.EMAIL_SEND`（送信バインディング）のみを引数として受け取り、環境変数全体（`Env`）に依存しない独立モジュールとして動作します。本文中のプレースホルダー（`${BASE_URL}` 等）の動的置換は呼び出し側で行います。
 
-本関数（`sendEmail`）は第一引数に `env.EMAIL_SEND`（送信バインディング）を受け取り、環境変数全体（`Env`）に依存しない単一責任のモジュールとして動作する。呼び出し側（Cron 処理等）にて本文テンプレート内のプレースホルダー `${BASE_URL}` の動的置換を行って送信する。
+## 7. 設定・環境変数設計
 
-```typescript
-export interface SendEmailOptions {
-  from: string;
-  to: string;
-  subject: string;
-  text: string;
-  html?: string;
-}
+本プロジェクトの設定および環境変数は [wrangler.jsonc](../wrangler.jsonc) にて管理されます。バインディングや Cron 設定の具体的な構造については [wrangler.jsonc](../wrangler.jsonc) を直接参照してください。
 
-export async function sendEmail(
-  emailSend: EmailSendBinding,
-  options: SendEmailOptions,
-): Promise<void> {
-  await emailSend.send({
-    from: options.from,
-    to: options.to,
-    subject: options.subject,
-    text: options.text,
-    html: options.html,
-  });
-}
-```
+### 7.1. 非機密環境変数（`vars`）
 
----
+- `BASE_URL`: システムの展開先 URL（チェックインページ URL の組み立てに使用）
+- `WARNING_DAYS`: 一次警告を発動する不活動日数（デフォルト: 7日）
+- `DEAD_DAYS`: 死後処理を発動する通算不活動日数（デフォルト: 14日）
+- `WARNING_EMAIL_SUBJECT` / `WARNING_EMAIL_BODY`: 一次警告メールの件名および本文テンプレート
+- `DEAD_EMAIL_SUBJECT`: 死後通知メールの件名
+- `VAPID_SUBJECT`: Web Push VAPID 連絡先（例: `mailto:owner@example.com`）
+- `SENDER_EMAIL_ADDRESS`: 差出人メールアドレス
 
-## 7. 設定・環境変数例（`wrangler.jsonc`）
+### 7.2. 機密環境変数（Secrets）
 
-```jsonc
-{
-  "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "dead-mans-switch",
-  "main": "src/index.ts",
-  "compatibility_date": "2026-08-01",
-  "compatibility_flags": [
-    "nodejs_compat" // web-push 実行用互換性フラグ (必須)
-  ],
-  "assets": {
-    "directory": "./public" // public/sw.js 静的ファイル自動配信設定 (必須)
-  },
-  "triggers": {
-    "crons": [
-      "0 0 * * *" // 毎日 00:00 UTC (日本時間 09:00)
-    ]
-  },
-  "kv_namespaces": [
-    {
-      "binding": "DMS_KV",
-      "id": "YOUR_KV_NAMESPACE_ID"
-    }
-  ],
-  "send_email": [
-    {
-      "name": "EMAIL_SEND"
-    }
-  ],
-  "vars": {
-    "BASE_URL": "https://dead-mans-switch.example.workers.dev",
-    "WARNING_DAYS": "7",
-    "DEAD_DAYS": "14",
-    "WARNING_EMAIL_SUBJECT": "【重要】Dead Man's Switch 生存確認リマインダー",
-    "WARNING_EMAIL_BODY": "アクティビティが途絶えています。生存確認を行う場合は以下のURLを開いてください:\n${BASE_URL}/checkin",
-    "DEAD_EMAIL_SUBJECT": "【重要通知】手続情報およびメッセージのご案内",
-    "VAPID_SUBJECT": "mailto:owner@example.com",
-    "SENDER_EMAIL_ADDRESS": "noreply@yourdomain.com" // Cloudflare 上で管理している所有ドメインのアドレス (必須)
-  }
-}
-
-// Secrets (PING_SECRET_TOKEN, OWNER_EMAIL_ADDRESS, KIN_EMAIL_ADDRESS, DEAD_EMAIL_BODY, VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY) の設定手順については「docs/進め方.md」を参照
-```
+認証トークンや秘密鍵などの機密情報は [wrangler.jsonc](../wrangler.jsonc) 内に直書きせず、`wrangler secret put` コマンドによって登録・保護します。各種 Secret の登録手順および詳細については [README.md](../README.md) を参照してください。

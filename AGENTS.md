@@ -42,8 +42,7 @@ Cloudflare Workers + Hono + KV 上で稼働する、全自動不活動検知・�
 | :-------------------------------------------- | :-------------------------------------- |
 | **全般的な要件・ステート遷移の変更**          | [REQUIREMENTS.md](docs/REQUIREMENTS.md) |
 | **アーキテクチャ・API・KV設計・設定等の変更** | [ARCHITECTURE.md](docs/ARCHITECTURE.md) |
-| **セットアップ手順・実装ロードマップの変更**  | [進め方.md](docs/進め方.md)             |
-| **概要・クイックスタートコマンド等の変更**    | [README.md](README.md)                  |
+| **概要・セットアップ・デプロイ手順の変更**    | [README.md](README.md)                  |
 
 ### 2. ドキュメント記述ルール
 
