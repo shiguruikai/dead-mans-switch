@@ -17,7 +17,7 @@ Cloudflare Workers + Hono + KV 上で稼働する、全自動不活動検知・�
 - **認証・アクセス制御**: Cloudflare Zero Trust (Access)（`/checkin` ページの Google Login / Passkey 認証）
 - **通知機能**:
   - **本人警告**: Cloudflare Email Send + Web Push（`web-push`, VAPID, Service Worker `public/sw.js`）※複数端末同時一括配信対応
-  - **死後通知**: Cloudflare Email Send（`mimetext`, `cloudflare:email`, `SENDER_EMAIL_ADDRESS`）
+  - **死後通知**: Cloudflare Email Send（`EmailMessageBuilder`, `SENDER_EMAIL_ADDRESS`）
 - **品質・テスト・ツール**: Vitest (`@cloudflare/vitest-pool-workers`), ESLint (v10, Flat Config, `@stylistic`), Wrangler (v4)
 
 ## コマンド

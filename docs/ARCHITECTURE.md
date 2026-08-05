@@ -165,30 +165,32 @@ flowchart TD
 
 ## 6. メール送信モジュール設計
 
-Cloudflare Workers の `send_email` バインディング（`env.EMAIL_SEND`）および `mimetext` を利用した送信処理。送信元アドレスには Cloudflare 上で自身が所有・管理（Email Routing 設定済み）しているカスタムドメインのアドレス `SENDER_EMAIL_ADDRESS`（例: `noreply@yourdomain.com`）を使用する。
+Cloudflare Workers の `send_email` バインディング（`env.EMAIL_SEND`）および構造化オブジェクト `EmailMessageBuilder` を利用した送信処理。送信元アドレスには Cloudflare 上で自身が所有・管理（Email Routing 設定済み）しているカスタムドメインのアドレス `SENDER_EMAIL_ADDRESS`（例: `noreply@yourdomain.com`）を使用する。
 
 ※ **完全無料（$0）稼働の仕様**: 送信先アドレス（`to`）に、Cloudflare Dashboard（Email Routing > Destination addresses）にて事前認証（Verify）が完了しているアドレス（`KIN_EMAIL_ADDRESS` / `OWNER_EMAIL_ADDRESS`）を指定して送信する場合、Workers Free プランを含むすべてのプランで**完全無料（$0）かつクォータ制限対象外**で直接送信可能。
 
-本関数（`sendEmail`）は一次警告メール（`WARNING_EMAIL_BODY`）および死後通知メール（`DEAD_EMAIL_BODY`）の両方の送信に使用され、本文テンプレート内にプレースホルダー `${BASE_URL}` が含まれている場合は `bodyTemplate.replaceAll('${BASE_URL}', env.BASE_URL)` により動的置換を行って送信する。
+本関数（`sendEmail`）は第一引数に `env.EMAIL_SEND`（送信バインディング）を受け取り、環境変数全体（`Env`）に依存しない単一責任のモジュールとして動作する。呼び出し側（Cron 処理等）にて本文テンプレート内のプレースホルダー `${BASE_URL}` の動的置換を行って送信する。
 
 ```typescript
-import { createMimeMessage } from 'mimetext';
-import { EmailMessage } from 'cloudflare:email';
+export interface SendEmailOptions {
+  from: string;
+  to: string;
+  subject: string;
+  text: string;
+  html?: string;
+}
 
-export async function sendEmail(env: Env, options: { to: string; subject: string; bodyTemplate: string }) {
-  // WARNING_EMAIL_BODY および DEAD_EMAIL_BODY の両方で ${BASE_URL} プレースホルダーを実際の環境変数 URL に置換
-  const formattedBody = options.bodyTemplate.replaceAll('${BASE_URL}', env.BASE_URL);
-
-  const msg = createMimeMessage();
-  // Cloudflare Email Routing では自所有ドメインの SENDER_EMAIL_ADDRESS が必須
-  msg.setSender({ name: "Dead Man's Switch", addr: env.SENDER_EMAIL_ADDRESS });
-  msg.setRecipient(options.to);
-  msg.setSubject(options.subject);
-  msg.addMessage({ contentType: 'text/plain', data: formattedBody });
-
-  const message = new EmailMessage(env.SENDER_EMAIL_ADDRESS, options.to, msg.asRaw());
-
-  await env.EMAIL_SEND.send(message);
+export async function sendEmail(
+  emailSend: EmailSendBinding,
+  options: SendEmailOptions,
+): Promise<void> {
+  await emailSend.send({
+    from: options.from,
+    to: options.to,
+    subject: options.subject,
+    text: options.text,
+    html: options.html,
+  });
 }
 ```
 

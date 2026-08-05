@@ -87,10 +87,12 @@ async function sendWarningNotifications(
 
   // 1. Email Warning
   try {
-    await sendEmail(env, {
+    const text = env.WARNING_EMAIL_BODY.replaceAll('${BASE_URL}', env.BASE_URL);
+    await sendEmail(env.EMAIL_SEND, {
+      from: env.SENDER_EMAIL_ADDRESS,
       to: env.OWNER_EMAIL_ADDRESS,
       subject: env.WARNING_EMAIL_SUBJECT,
-      bodyTemplate: env.WARNING_EMAIL_BODY,
+      text,
     });
     warningSentAt = now.toISOString();
   } catch (err) {
@@ -139,10 +141,12 @@ async function sendDeadNotifications(env: Env, now: Date): Promise<DeadResult> {
   let deadSentAt: string | null = null;
 
   try {
-    await sendEmail(env, {
+    const text = deadBodyTemplate.replaceAll('${BASE_URL}', env.BASE_URL);
+    await sendEmail(env.EMAIL_SEND, {
+      from: env.SENDER_EMAIL_ADDRESS,
       to: env.KIN_EMAIL_ADDRESS,
       subject: env.DEAD_EMAIL_SUBJECT,
-      bodyTemplate: deadBodyTemplate,
+      text,
     });
     deadSentAt = now.toISOString();
   } catch (err) {

@@ -16,7 +16,6 @@
   },
   "dependencies": {
     "hono": "^4.12.34",
-    "mimetext": "^3.0.28",
     "web-push": "^3.6.7"
   },
   "devDependencies": {

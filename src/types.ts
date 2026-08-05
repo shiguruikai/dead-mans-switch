@@ -1,5 +1,4 @@
 import type { KVNamespace } from '@cloudflare/workers-types';
-import type { EmailMessage } from 'cloudflare:email';
 
 export type SystemStatus = 'NORMAL' | 'WARNING' | 'DEAD';
 
@@ -21,8 +20,16 @@ export interface SystemData {
   push_subscriptions: PushSubscription[];
 }
 
+export interface EmailMessageBuilder {
+  to: string;
+  from: string;
+  subject: string;
+  text?: string;
+  html?: string;
+}
+
 export interface EmailSendBinding {
-  send: (message: EmailMessage) => Promise<void>;
+  send: (message: EmailMessageBuilder) => Promise<unknown>;
 }
 
 export interface Env {
