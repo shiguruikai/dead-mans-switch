@@ -31,7 +31,6 @@
     "VAPID_SUBJECT": "mailto:owner@example.com",
     "OWNER_EMAIL_ADDRESS": "owner@example.com",
     "KIN_EMAIL_ADDRESS": "kin@example.com",
-    "PING_SECRET_TOKEN": "YOUR_RANDOM_PING_SECRET_TOKEN",
     "VAPID_PUBLIC_KEY": "YOUR_VAPID_PUBLIC_KEY",
     "VAPID_PRIVATE_KEY": "YOUR_VAPID_PRIVATE_KEY",
     "WARNING_DAYS": "7",

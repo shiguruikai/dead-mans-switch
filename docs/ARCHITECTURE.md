@@ -6,7 +6,7 @@
 | :--- | :--- | :--- |
 | **開発言語** | TypeScript (v6.x) | 型安全な Worker 実装 |
 | **フレームワーク** | Hono (v4.x) | 軽量 Web フレームワーク |
-| **認証・アクセス制御** | Cloudflare Zero Trust | `/checkin` ページの本人認証・保護（Google/Passkey） |
+| **認証・アクセス制御** | Cloudflare Zero Trust | 全パス保護（本人認証: Google/Passkey、外部API認証: Service Tokens） |
 | **実行基盤** | Cloudflare Workers | サーバーレスランタイム (Wrangler v4, `nodejs_compat`) |
 | **静的アセット配信** | Cloudflare Workers Static Assets | `public/sw.js`（Service Worker）、`public/style.css` の静的自動配信 |
 | **ストレージ** | Cloudflare KV (`DMS_KV`) | 状態・タイムスタンプ・複数端末 Web Push サブスク保存 |
@@ -58,16 +58,16 @@ dead-mans-switch/
 
 ### 4.1. Access controls
 
-Cloudflare Dashboard > **Zero Trust** > **Access controls** 設定にて以下のルールを適用します。
+Cloudflare Dashboard > **Zero Trust** > **Access controls** 設定にてドメイン全体（全パス）を保護対象とし、アクセス方法に応じたルールを適用します。
 
-| パス / エンドポイント | 認証制御 | 詳細 |
+| パス / エンドポイント | 適用される Zero Trust Policy | 詳細 |
 | :--- | :--- | :--- |
-| **`GET /checkin`** | **Protect (Access 認証必須)** | 本人の Google アカウント / Passkey 認証を通したユーザーのみアクセス許可。 |
-| **`POST /checkin/ping`** | **Protect (Access 認証必須)** | ダッシュボードからの手動 Ping 用。PING_SECRET_TOKEN 不要。 |
-| **`POST /api/push/subscribe`** | **Protect (Access 認証必須)** | 本人端末からのみ Web Push 登録を許可。 |
-| **`DELETE /api/push/subscribe`** | **Protect (Access 認証必須)** | 本人端末からの Web Push 登録解除を許可。 |
-| **`POST /api/ping`** | **Bypass (X-Ping-Token 認証)** | 外部スクリプト等からの自動 Ping 用に Bypass 設定。ヘッダーで認証。 |
-| **`GET /api/status`** | **Bypass (X-Ping-Token 認証)** | デバッグ・外部状態監視用。ヘッダー認証。 |
+| **`GET /checkin`** | **Allow (User Email / Identity)** | 本人の Google アカウント / Passkey 認証を通したユーザーのみアクセス許可。 |
+| **`POST /checkin/ping`** | **Allow (User Email / Identity)** | ダッシュボードからの手動 Ping 用。Access ログインセッションで保護。 |
+| **`POST /api/push/subscribe`** | **Allow (User Email / Identity)** | 本人端末からのみ Web Push 登録を許可。 |
+| **`DELETE /api/push/subscribe`** | **Allow (User Email / Identity)** | 本人端末からの Web Push 登録解除を許可。 |
+| **`POST /api/ping`** | **Bypass (Service Token)** | スクリプト等からの自動 Ping 用に Service Token (`CF-Access-Client-Id` / `CF-Access-Client-Secret`) で Access を Bypass。 |
+| **`GET /api/status`** | **Bypass (Service Token)** | デバッグ・外部状態監視用に Service Token で Access を Bypass。 |
 
 ※ `public/sw.js` は Workers Static Assets (`assets = { directory = "./public" }`) により Hono 側を経由せず静的に自動配信されます。
 
@@ -95,8 +95,7 @@ Cloudflare Dashboard > **Zero Trust** > **Access controls** 設定にて以下�
 
 #### 3. `POST /api/ping`（パッシブアクティビティ更新）
 
-- **認証**: ヘッダー `X-Ping-Token: <PING_SECRET_TOKEN>` または Access 認証
-- **認証エラー**: `401 Unauthorized`
+- **認証**: Cloudflare Zero Trust (Service Token 認証 または Access ユーザー認証)
 - **処理**:
   1. `status === "DEAD"` の場合は `403 Forbidden` (`{"error": "System locked out (status is DEAD)"}`) を返却。
   2. `last_active_at` を現在時刻に更新。
@@ -105,7 +104,7 @@ Cloudflare Dashboard > **Zero Trust** > **Access controls** 設定にて以下�
 
 #### 4. `POST /api/push/subscribe`（Web Push サブスクリプション保存・複数端末対応）
 
-- **認証**: Cloudflare Zero Trust / ヘッダー認証
+- **認証**: Cloudflare Zero Trust
 - **処理**:
   1. 受信した `PushSubscription` オブジェクトを取得。
   2. KV の `push_subscriptions`（配列）を取得。既存の配列内に同 `endpoint` が存在すれば最新データに更新し、存在しなければ配列に追加（最大20件制限）。
@@ -114,7 +113,7 @@ Cloudflare Dashboard > **Zero Trust** > **Access controls** 設定にて以下�
 
 #### 5. `DELETE /api/push/subscribe`（Web Push サブスクリプション削除）
 
-- **認証**: Cloudflare Zero Trust / ヘッダー認証
+- **認証**: Cloudflare Zero Trust
 - **処理**:
   1. 受信した JSON 内の `endpoint` を取得。
   2. KV の `push_subscriptions` 配列から対象 `endpoint` のサブスクリプションを削除して KV を更新。
@@ -122,7 +121,7 @@ Cloudflare Dashboard > **Zero Trust** > **Access controls** 設定にて以下�
 
 #### 6. `GET /api/status`（状態確認 API）
 
-- **認証**: ヘッダー `X-Ping-Token: <PING_SECRET_TOKEN>` または Access 認証
+- **認証**: Cloudflare Zero Trust (Service Token 認証 または Access ユーザー認証)
 - **レスポンス**: `200 OK` (`{"status": "NORMAL", "days_since_active": 0.5, ...}`)
 
 ## 5. 定期実行処理（Cron Trigger）と状態遷移
@@ -172,7 +171,6 @@ Cloudflare Workers の `send_email` バインディング（`env.EMAIL_SEND`）�
 - `VAPID_SUBJECT`: Web Push VAPID 連絡先（例: `mailto:owner@example.com`）
 - `OWNER_EMAIL_ADDRESS`: 本人通知先メールアドレス（生存確認リマインダーの受取先）
 - `KIN_EMAIL_ADDRESS`: 死後通知先メールアドレス（手続案内・メッセージの受取先）
-- `PING_SECRET_TOKEN`: 生存確認用 API 認証トークン
 - `VAPID_PUBLIC_KEY` / `VAPID_PRIVATE_KEY`: Web Push 送信・認証用 VAPID 鍵ペア
 - `WARNING_DAYS`: 生存確認リマインダーを発動する不活動日数（デフォルト: 7日）
 - `DEAD_DAYS`: 死後処理を発動する通算不活動日数（デフォルト: 14日）

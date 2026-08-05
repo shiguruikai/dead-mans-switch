@@ -45,7 +45,6 @@ export interface Env {
   VAPID_SUBJECT: string;
   OWNER_EMAIL_ADDRESS: string;
   KIN_EMAIL_ADDRESS: string;
-  PING_SECRET_TOKEN: string;
   VAPID_PUBLIC_KEY: string;
   VAPID_PRIVATE_KEY: string;
   WARNING_DAYS: string;

@@ -34,11 +34,11 @@ stateDiagram-v2
   - 本人認証（Cloudflare Zero Trust で設定された Google ログインまたは Passkey 認証）を通過したユーザーのみアクセス可能。
   - 現在のステータス（現在のステータス名、最終アクティブ日時、警告までの残り日数、Web Push 購読状況）を表示し、ワンタップで `NORMAL` へ復帰・Ping 更新を行う手動確認画面。およびアクセスした端末の Web Push 通知の購読登録（サブスクリプション取得）を行う。
   - **※ `DEAD` 状態時**: ステータス更新ボタンを無効化し、「死後処理完了済み（システムロックアウト中）」の警告メッセージ画面のみを表示して復帰を完全にブロックする。
-- **`POST /api/ping`**（ヘッダー認証: `X-Ping-Token`）
+- **`POST /api/ping`**（Cloudflare Zero Trust 保護: Service Token 認証または Access 認証）
   - 最終アクティブ日時（`last_active_at`）を更新し、`WARNING` 状態であれば `NORMAL` へ自動復帰する（※`DEAD` 状態時は `403 Forbidden` を返し拒否）。
 - **`POST /api/push/subscribe`**（Cloudflare Zero Trust 保護）
   - ブラウザの Web Push サブスクリプション情報（Endpoint, Keys）を KV 内の端末リスト（`push_subscriptions`）へ追加・更新登録する。
-- **`GET /api/status`**（ヘッダー認証: `X-Ping-Token`）
+- **`GET /api/status`**（Cloudflare Zero Trust 保護: Service Token 認証または Access 認証）
   - 現在のステータス・経過日数・設定値を JSON で返却する。
 
 ### 3.2. 不活動判定・定時チェック（Cron Trigger）
@@ -52,7 +52,7 @@ stateDiagram-v2
 ## 4. 非機能要件
 
 1. **永続性・コスト**: Cloudflare Workers + KV を使用し、完全無料枠で無期限に安定稼働すること。※ Cloudflare Email Send において、あらかじめ Cloudflare Dashboard > **Email Routing** > **Destination Addresses** にて事前認証（Verify）を完了させた送信先メールアドレス（本人通知先 `OWNER_EMAIL_ADDRESS` および死後通知先 `KIN_EMAIL_ADDRESS`）へのメール送信は、Workers Free プランを含む全プランで**完全無料かつ送信数上限のカウント対象外**として利用可能。
-2. **セキュリティ**: `/checkin` ページは Cloudflare Zero Trust で保護し、外部からの誤操作・クローラーアクセスを100%遮断すること。APIトークン、Web Push 秘密鍵、送信元メールアドレス・送信先メールアドレス、死後通知本文は Wrangler Secrets / 環境変数で分離保護すること。
+2. **セキュリティ**: 全エンドポイントは Cloudflare Zero Trust（ユーザーログイン認証および Service Token 認証）で一括保護し、外部からの未認証アクセス・誤操作・クローラーアクセスを100%遮断すること。Web Push 秘密鍵、送信元メールアドレス・送信先メールアドレス、死後通知本文は Wrangler Secrets / 環境変数で分離保護すること。
 3. **品質保証**: Vitest (@cloudflare/vitest-pool-workers) によるローカル自動テスト環境を含むこと。
 
 ## 5. 運用上のリスク・最悪の想定への対策（ドメイン維持）

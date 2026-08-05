@@ -49,7 +49,6 @@ function createMockEnv(kv: MockKVNamespace): Env {
     DEAD_EMAIL_SUBJECT: '【重要通知】手続情報案内',
     VAPID_SUBJECT: 'mailto:owner@example.com',
     SENDER_EMAIL_ADDRESS: 'noreply@yourdomain.com',
-    PING_SECRET_TOKEN: 'test-secret-token-123',
     OWNER_EMAIL_ADDRESS: 'owner@example.com',
     KIN_EMAIL_ADDRESS: 'kin@example.com',
     DEAD_EMAIL_BODY: '死後通知本文',
@@ -160,7 +159,7 @@ describe('Hono API Endpoints (src/index.ts)', () => {
     expect(html).not.toContain('pingBtn');
   });
 
-  it('POST /checkin/ping updates activity without X-Ping-Token (Access protected)', async () => {
+  it('POST /checkin/ping updates activity (Access protected)', async () => {
     const res = await app.request('/checkin/ping', { method: 'POST' }, env);
     expect(res.status).toBe(200);
     const body = await res.json<any>();
@@ -168,17 +167,10 @@ describe('Hono API Endpoints (src/index.ts)', () => {
     expect(body.status).toBe('NORMAL');
   });
 
-  it('POST /api/ping requires X-Ping-Token header or Access Email header', async () => {
-    const resUnauthorized = await app.request('/api/ping', { method: 'POST' }, env);
-    expect(resUnauthorized.status).toBe(401);
-
-    const resValid = await app.request(
-      '/api/ping',
-      { method: 'POST', headers: { 'X-Ping-Token': 'test-secret-token-123' } },
-      env,
-    );
-    expect(resValid.status).toBe(200);
-    const body = await resValid.json<any>();
+  it('POST /api/ping updates activity', async () => {
+    const res = await app.request('/api/ping', { method: 'POST' }, env);
+    expect(res.status).toBe(200);
+    const body = await res.json<any>();
     expect(body.success).toBe(true);
     expect(body.status).toBe('NORMAL');
   });
@@ -188,11 +180,7 @@ describe('Hono API Endpoints (src/index.ts)', () => {
     data.status = 'DEAD';
     await saveSystemData(mockKv as any, data);
 
-    const res = await app.request(
-      '/api/ping',
-      { method: 'POST', headers: { 'X-Ping-Token': 'test-secret-token-123' } },
-      env,
-    );
+    const res = await app.request('/api/ping', { method: 'POST' }, env);
     expect(res.status).toBe(403);
   });
 
@@ -201,7 +189,7 @@ describe('Hono API Endpoints (src/index.ts)', () => {
       '/api/push/subscribe',
       {
         method: 'POST',
-        headers: { 'X-Ping-Token': 'test-secret-token-123', 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ endpoint: 'http://example.com' }),
       },
       env,
@@ -217,7 +205,7 @@ describe('Hono API Endpoints (src/index.ts)', () => {
       '/api/push/subscribe',
       {
         method: 'POST',
-        headers: { 'X-Ping-Token': 'test-secret-token-123', 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(sub),
       },
       env,
@@ -239,7 +227,7 @@ describe('Hono API Endpoints (src/index.ts)', () => {
       '/api/push/subscribe',
       {
         method: 'DELETE',
-        headers: { 'X-Ping-Token': 'test-secret-token-123', 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ endpoint: 'https://push.example.com/test-endpoint' }),
       },
       env,
@@ -251,11 +239,7 @@ describe('Hono API Endpoints (src/index.ts)', () => {
   });
 
   it('GET /api/status returns status details', async () => {
-    const res = await app.request(
-      '/api/status',
-      { headers: { 'X-Ping-Token': 'test-secret-token-123' } },
-      env,
-    );
+    const res = await app.request('/api/status', {}, env);
     expect(res.status).toBe(200);
     const body = await res.json<any>();
     expect(body.status).toBe('NORMAL');

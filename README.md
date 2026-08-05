@@ -35,6 +35,10 @@ Cloudflare Workers 上で稼働する、個人専用のセルフホスト型死�
      pnpm dlx web-push generate-vapid-keys
      ```
 
+> [!NOTE]
+>
+> Cloudflare Email Service の Email Sending を利用するには有料プランの契約が必要ですが、**事前認証済みの Destination Address 宛てへのメール送信は Workers Free プランを含むすべてのプランで無料**で利用できます。
+
 ### 2. ローカル設定 ＆ KV ネームスペース作成
 
 #### 1. 依存パッケージのインストールと設定ファイルの準備
@@ -82,7 +86,6 @@ Cloudflare Workers 上で稼働する、個人専用のセルフホスト型死�
 | `VAPID_SUBJECT` | Web Push 用 VAPID 連絡先（`mailto:本人メールアドレス`） | `mailto:owner@example.com` | **必須** |
 | `OWNER_EMAIL_ADDRESS` | 本人通知先メールアドレス（生存確認リマインダーの受取先） | 事前に Destination Addresses で承認済みの本人アドレス | **必須** |
 | `KIN_EMAIL_ADDRESS` | 死後通知先メールアドレス（手続案内・メッセージの受取先） | 事前に Destination Addresses で承認済みの受取人アドレス | **必須** |
-| `PING_SECRET_TOKEN` | 外部スクリプト（Git フック等）からの自動 Ping 用認証キー | 任意のランダムな英数字列（例: `openssl rand -hex 16` 等） | **必須** |
 | `VAPID_PUBLIC_KEY` | Web Push 通知用の Public Key | 事前準備手順で生成した Public Key | **必須** |
 | `VAPID_PRIVATE_KEY` | Web Push 通知用の Private Key | 事前準備手順で生成した Private Key | **必須** |
 | `WARNING_DAYS` | 生存確認リマインダー（メール＋Web Push）を送信する不活動日数 | `"7"`（7日経過後） | 任意 |
@@ -106,36 +109,52 @@ pnpm deploy
 
 ### 4. デプロイ後の設定
 
-1. **Cloudflare Zero Trust によるアクセス保護**
-   - Cloudflare Dashboard > **Zero Trust** > **Access controls** > **Applications** で `Create new application` ボタンをクリックします。
-   - Destinations:
-      - Public hostnames: `<YOUR_WORKER_DOMAIN>/checkin`
-   - Access policies:
-      - `OWNER_EMAIL_ADDRESS`（本人通知先）のみ許可するポリシーを設定、または、定義済みポリシーの「Allow My Email」等を選択します。
-   - `Create` ボタンをクリックします。
-2. **初回 Web Push 購読設定**
-   - `https://<YOUR_WORKER_DOMAIN>/checkin` へアクセスし、Zero Trust 認証を通過してください。
-   - 「この端末の Web Push 通知を許可」ボタンをクリックし、表示された「通知を許可」ボタンをクリックします。
-3. **環境変数の変更手順（運用開始後）**
-   - [wrangler.jsonc](wrangler.jsonc) 内の `vars` の値を編集し、`pnpm deploy` を再実行するだけで簡単に更新できます。
-   - ※ Cloudflare Dashboard > **Workers & Pages** > 本 Worker > **Settings** > **Variables and Secrets** からブラウザ上で直接編集することも可能です。
+#### 4.1 外部スクリプト用 Service Token の作成
 
-## 🛠 開発用コマンド
+外部スクリプトなどから生存報告 (`POST /api/ping`) を行うための認証トークンを作成します。
+
+1. Cloudflare Dashboard > **Zero Trust** > **Access controls** > **Service credentials** > **Service Tokens** を開きます。
+2. **Create Service Token** をクリックします。
+3. **Service Token Name**（例: `dead-mans-switch-token`）と **Service Token Duration**（例: `Non-expiring`）を入力し、`Generate token` をクリックします。
+4. 表示された **Header and client ID** と **Header and client secret** を控えておきます。※ Client Secret は画面を閉じると再表示できません。
+
+#### 4.2 Cloudflare Zero Trust の設定
+
+アプリケーション（Worker ドメイン全体）へのアクセス制御ルールを設定します。
+
+1. Cloudflare Dashboard > **Zero Trust** > **Access controls** > **Applications** を開きます。
+2. **Create new application** をクリックし、**Continue with Self-hosted and private** をクリックします。
+3. **Public hostnames** に `<YOUR_WORKER_DOMAIN>`（例: `dead-mans-switch.example.workers.dev`）を入力します。
+4. **Access Policies** にて以下の2つのポリシーを追加します。
+   - **本人用ポリシー**: デフォルトで定義済みの `Allow My Email` など本人確認ができる任意のポリシー
+   - **外部スクリプト用ポリシー**: 前述の手順で作成した Service Token で Bypass するポリシー
+
+#### 4.3 外部スクリプトからの呼び出し例
+
+自動生存報告を行うスクリプトからは、以下のヘッダーを付与してリクエストを送信します：
 
 ```bash
-# ローカル開発サーバー起動
-pnpm dev
-
-# 型チェック / リント / テスト
-pnpm typecheck
-pnpm lint
-pnpm test
+curl -X POST "https://<YOUR_WORKER_DOMAIN>/api/ping" \
+  -H "CF-Access-Client-Id: <YOUR_CLIENT_ID>" \
+  -H "CF-Access-Client-Secret: <YOUR_CLIENT_SECRET>"
 ```
 
-> **[!IMPORTANT]**
+#### 4.4 初回 Web Push 購読設定
+
+本人端末のブラウザから通知購読を登録します。
+
+1. `https://<YOUR_WORKER_DOMAIN>/checkin` へアクセスし、Zero Trust 認証を通過します。
+2. 「この端末の Web Push 通知を許可 / 更新」ボタンをクリックし、表示されたブラウザダイアログで「許可」を選択します。
+
+#### 4.5 環境変数の変更手順（運用開始後）
+
+- [wrangler.jsonc](wrangler.jsonc) 内の `vars` の値を編集し、`pnpm deploy` を再実行するだけで更新できます。
+- ※ Cloudflare Dashboard > **Workers & Pages** > 本 Worker > **Settings** > **Variables and Secrets** から直接編集することも可能です。
+
+> [!IMPORTANT]
 >
-> - **無料でメール送信**: 送信先メールアドレスは、あらかじめ Cloudflare Dashboard > **Email Routing** > **Destination Addresses** で事前登録・受信承認（Verify）を済ませる必要があります。Cloudflare の仕様により、**事前認証済みの Destination Address 宛てへのメール送信は Workers Free プランを含む全プランで完全無料** で利用できます。
-> - **【最悪の想定】クレカ解約によるドメイン自動解約リスクへの対策**: 本人が死亡した際、親族がクレジットカードを解約または口座を凍結することで、ドメインの自動更新が失敗し、死後通知前にドメインが失効するリスクがあります。不活動期間（`DEAD_DAYS`）を2ヶ月以上の長期に設定する場合は、**ドメインを5年〜10年分まとめて前払い（一括更新）しておくか、不活動期間を30日以内に設定する運用**を推奨します。
+> **【最悪の想定】クレカ解約によるドメイン自動解約リスクへの対策**
+> 本人が死亡した際、親族がクレジットカードを解約または口座を凍結することで、ドメインの自動更新が失敗し、死後通知前にドメインが失効するリスクがあります。不活動期間（`DEAD_DAYS`）を2ヶ月以上の長期に設定する場合は、**ドメインを5年〜10年分まとめて前払いしておく、または、不活動期間を30日以内に設定する運用**を推奨します。
 
 ## 📄 ライセンス
 

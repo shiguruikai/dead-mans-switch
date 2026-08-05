@@ -1,4 +1,3 @@
-import type { Context } from 'hono';
 import { Hono } from 'hono';
 
 import { processScheduledCheck } from './services/cron';
@@ -12,21 +11,6 @@ import { renderDashboardPage, renderDeadPage } from './templates/checkin';
 import type { Env, PushSubscription } from './types';
 
 const app = new Hono<{ Bindings: Env }>();
-
-// Auth Middleware: X-Ping-Token または Zero Trust Access Email
-const authMiddleware = async (c: Context<{ Bindings: Env }>, next: () => Promise<void>) => {
-  const token = c.req.header('X-Ping-Token');
-  const cfEmail = c.req.header('Cf-Access-Authenticated-User-Email');
-
-  const isDev = process.env.NODE_ENV === 'development';
-
-  if (cfEmail || (token && token === c.env.PING_SECRET_TOKEN) || isDev) {
-    await next();
-    return;
-  }
-
-  return c.json({ error: 'Unauthorized' }, 401);
-};
 
 // 1. GET /checkin (Zero Trust protected)
 app.get('/checkin', async (c) => {
@@ -58,8 +42,8 @@ app.post('/checkin/ping', async (c) => {
   }
 });
 
-// 3. POST /api/ping (X-Ping-Token protected for external scripts)
-app.post('/api/ping', authMiddleware, async (c) => {
+// 3. POST /api/ping (Zero Trust protected for external scripts)
+app.post('/api/ping', async (c) => {
   try {
     const updated = await updateActivity(c.env.DMS_KV);
     return c.json({
@@ -76,8 +60,8 @@ app.post('/api/ping', authMiddleware, async (c) => {
   }
 });
 
-// 4. POST /api/push/subscribe (Zero Trust / Auth protected)
-app.post('/api/push/subscribe', authMiddleware, async (c) => {
+// 4. POST /api/push/subscribe (Zero Trust protected)
+app.post('/api/push/subscribe', async (c) => {
   try {
     const subscription = (await c.req.json()) as unknown as Partial<PushSubscription>;
     if (!subscription.endpoint || !subscription.keys) {
@@ -95,8 +79,8 @@ app.post('/api/push/subscribe', authMiddleware, async (c) => {
   }
 });
 
-// 5. DELETE /api/push/subscribe (Zero Trust / Auth protected)
-app.delete('/api/push/subscribe', authMiddleware, async (c) => {
+// 5. DELETE /api/push/subscribe (Zero Trust protected)
+app.delete('/api/push/subscribe', async (c) => {
   try {
     const body = (await c.req.json()) as unknown as { endpoint?: string };
     if (!body.endpoint || typeof body.endpoint !== 'string') {
@@ -114,8 +98,8 @@ app.delete('/api/push/subscribe', authMiddleware, async (c) => {
   }
 });
 
-// 6. GET /api/status
-app.get('/api/status', authMiddleware, async (c) => {
+// 6. GET /api/status (Zero Trust protected)
+app.get('/api/status', async (c) => {
   const data = await getSystemData(c.env.DMS_KV);
   const now = new Date();
   const lastActive = new Date(data.last_active_at);
