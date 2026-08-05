@@ -8,7 +8,7 @@ import tseslint from 'typescript-eslint';
 
 export default defineConfig([
   // グローバル無視ルール
-  globalIgnores(['docs/', 'worker-configuration.d.ts']),
+  globalIgnores(['.wrangler/', 'docs/', '**/worker-configuration.d.ts']),
 
   // 基本構成
   js.configs.recommended,
