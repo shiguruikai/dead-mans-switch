@@ -23,7 +23,7 @@ Cloudflare Workers 上で稼働する、個人専用のセルフホスト型死�
 - `pnpm install`: 依存パッケージのインストール
 - `pnpm dev`: Wrangler によるローカル開発サーバー起動 (`wrangler dev`)
 - `pnpm typecheck`: 型定義自動生成（`cf-typegen`）および TypeScript 型チェック (`tsc --noEmit`)
-- `pnpm lint`: ESLint によるコード静的解析
+- `pnpm lint:fix`: `eslint --fix .`
 - `pnpm test`: Vitest による全単体テスト実行
 - `pnpm deploy`: Cloudflare Workers への本番デプロイ
 - `pnpm wrangler kv namespace create DMS_KV`: KV ネームスペースの作成
@@ -50,7 +50,7 @@ Cloudflare Workers 上で稼働する、個人専用のセルフホスト型死�
 タスク完了には以下の全条件を満たすこと：
 
 1. **実装**: 仕様に沿ったモジュール実装
-2. **検証成功**: `pnpm typecheck`（型チェック）、`pnpm lint`（ESLint）、`pnpm test`（単体テスト）がすべてエラーゼロで成功すること
+2. **検証成功**: `pnpm typecheck`, `pnpm lint:fix`, `pnpm test` がすべてエラーゼロで成功すること
 3. **ドキュメント同期**: 仕様・構造変更に伴う関連ドキュメントの最新化
 
 ### 4. 仕様不整合・トラブル発生時の原則
@@ -61,7 +61,7 @@ Cloudflare Workers 上で稼働する、個人専用のセルフホスト型死�
 ## Gitルール
 
 - **事前検証**: コミット前に必ず `pnpm typecheck`、`pnpm lint`、`pnpm test` をすべて実行し成功させること。
-- **コミットメッセージ**: `Conventional Commits` 形式（`<type>: <description>`）に準拠し、`<description>` は簡潔な日本語で記述すること（例: `feat: ESLintの導入`）。
+- **コミットメッセージ**: `Conventional Commits` 形式（`<type>: <description>`）に準拠し、`<description>` は簡潔な日本語で記述すること。
 - **ユーザー確認**: ユーザーの明示的な指示がない限り、自動で `git commit` や `git push` を行わず事前に許可を得ること。
 
 ## 禁止事項
