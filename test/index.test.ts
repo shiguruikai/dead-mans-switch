@@ -325,4 +325,52 @@ describe('Scheduled Cron Trigger (src/services/cron.ts)', () => {
     expect(result.dead_sent_at).not.toBeNull();
     expect(env.EMAIL_SEND.send).toHaveBeenCalledTimes(1);
   });
+
+  it('should send notifications to multiple recipients when OWNER_EMAIL_ADDRESS or KIN_EMAIL_ADDRESS contains multiple addresses', async () => {
+    env.OWNER_EMAIL_ADDRESS = 'owner1@example.com, owner2@example.com';
+    env.KIN_EMAIL_ADDRESS = 'kin1@example.com, kin2@example.com, kin3@example.com';
+
+    const data = await getSystemData(mockKv as any);
+    const fourteenDaysAgo = new Date(Date.now() - 14 * 86400 * 1000);
+    data.last_active_at = fourteenDaysAgo.toISOString();
+    data.status = 'WARNING';
+    data.warning_sent_at = new Date(Date.now() - 7 * 86400 * 1000).toISOString();
+    await saveSystemData(mockKv as any, data);
+
+    const result = await processScheduledCheck(env);
+    expect(result.status).toBe('DEAD');
+    expect(result.dead_sent_at).not.toBeNull();
+    // env.EMAIL_SEND.send は kin1, kin2, kin3 の 3 回呼ばれる
+    expect(env.EMAIL_SEND.send).toHaveBeenCalledTimes(3);
+    expect(env.EMAIL_SEND.send).toHaveBeenNthCalledWith(1, expect.objectContaining({ to: 'kin1@example.com' }));
+    expect(env.EMAIL_SEND.send).toHaveBeenNthCalledWith(2, expect.objectContaining({ to: 'kin2@example.com' }));
+    expect(env.EMAIL_SEND.send).toHaveBeenNthCalledWith(3, expect.objectContaining({ to: 'kin3@example.com' }));
+  });
+
+  it('should mark status as DEAD even if one of the multiple recipients fails', async () => {
+    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {
+      // Suppress console.error during test
+    });
+    env.KIN_EMAIL_ADDRESS = 'kin1@example.com, failed@example.com';
+    env.EMAIL_SEND.send = vi.fn().mockImplementation(({ to }) => {
+      if (to === 'failed@example.com') {
+        return Promise.reject(new Error('Failed delivery'));
+      }
+      return Promise.resolve(undefined);
+    });
+
+    const data = await getSystemData(mockKv as any);
+    const fourteenDaysAgo = new Date(Date.now() - 14 * 86400 * 1000);
+    data.last_active_at = fourteenDaysAgo.toISOString();
+    data.status = 'WARNING';
+    data.warning_sent_at = new Date(Date.now() - 7 * 86400 * 1000).toISOString();
+    await saveSystemData(mockKv as any, data);
+
+    const result = await processScheduledCheck(env);
+    expect(result.status).toBe('DEAD');
+    expect(result.dead_sent_at).not.toBeNull();
+    expect(env.EMAIL_SEND.send).toHaveBeenCalledTimes(2);
+    expect(consoleErrorSpy).toHaveBeenCalled();
+    consoleErrorSpy.mockRestore();
+  });
 });

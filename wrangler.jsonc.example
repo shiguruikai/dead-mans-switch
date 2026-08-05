@@ -29,8 +29,8 @@
     "BASE_URL": "https://dead-mans-switch.example.workers.dev",
     "SENDER_EMAIL_ADDRESS": "noreply@yourdomain.com",
     "VAPID_SUBJECT": "mailto:owner@example.com",
-    "OWNER_EMAIL_ADDRESS": "owner@example.com",
-    "KIN_EMAIL_ADDRESS": "kin@example.com",
+    "OWNER_EMAIL_ADDRESS": "owner@example.com", // カンマ区切りで複数指定可能（例: "owner1@example.com, owner2@example.com"）
+    "KIN_EMAIL_ADDRESS": "kin@example.com", // カンマ区切りで複数指定可能（例: "kin1@example.com, kin2@example.com"）
     "VAPID_PUBLIC_KEY": "YOUR_VAPID_PUBLIC_KEY",
     "VAPID_PRIVATE_KEY": "YOUR_VAPID_PRIVATE_KEY",
     "WARNING_DAYS": "7",

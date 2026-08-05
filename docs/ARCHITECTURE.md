@@ -58,7 +58,7 @@ dead-mans-switch/
 
 ### 4.1. Access controls
 
-Cloudflare Dashboard > **Zero Trust** > **Access controls** 設定にてドメイン全体（全パス）を保護対象とし、アクセス方法に応じたルールを適用します。
+Cloudflare Dashboard > **Zero Trust** > **Access controls** 設定にてドメイン全体（全パス）を保護対象とし、アクセス方法に応じたルールを適用する。
 
 | パス / エンドポイント | 適用される Zero Trust Policy | 詳細 |
 | :--- | :--- | :--- |
@@ -69,7 +69,7 @@ Cloudflare Dashboard > **Zero Trust** > **Access controls** 設定にてドメ�
 | **`POST /api/ping`** | **Bypass (Service Token)** | スクリプト等からの自動 Ping 用に Service Token (`CF-Access-Client-Id` / `CF-Access-Client-Secret`) で Access を Bypass。 |
 | **`GET /api/status`** | **Bypass (Service Token)** | デバッグ・外部状態監視用に Service Token で Access を Bypass。 |
 
-※ `public/sw.js` は Workers Static Assets (`assets = { directory = "./public" }`) により Hono 側を経由せず静的に自動配信されます。
+※ `public/sw.js` は Workers Static Assets (`assets = { directory = "./public" }`) により Hono 側を経由せず静的に自動配信される。
 
 ### 4.2. API 詳細仕様
 
@@ -154,27 +154,28 @@ flowchart TD
 
 ## 6. メール送信モジュール設計
 
-Cloudflare Workers の `send_email` バインディング（`env.EMAIL_SEND`）を利用したメール送信モジュールです。具体的な実装コードについては [src/services/email.ts](../src/services/email.ts) を参照してください。
+Cloudflare Workers の `send_email` バインディング（`env.EMAIL_SEND`）を利用したメール送信モジュール。具体的な実装コードについては [src/services/email.ts](../src/services/email.ts) を参照。
 
-- **送信元メールアドレス**: Cloudflare 上で所有・管理（Email Routing 設定済み）しているカスタムドメインのアドレス `SENDER_EMAIL_ADDRESS`（例: `noreply@yourdomain.com`）を使用します。
-- **完全無料（$0）仕様**: Cloudflare Dashboard > **Email Routing** > **Destination Addresses** にて事前認証（Verify）が完了している送信先メールアドレス（本人通知先 `OWNER_EMAIL_ADDRESS` および死後通知先 `KIN_EMAIL_ADDRESS`）宛てに送信する場合、Workers Free プランを含むすべてのプランで送信数上限のカウント対象外（完全無料）で直接送信可能です。
-- **単一責任設計**: `sendEmail` 関数は `env.EMAIL_SEND`（送信バインディング）のみを引数として受け取り、環境変数全体（`Env`）に依存しない独立モジュールとして動作します。本文中のプレースホルダー（`${BASE_URL}` 等）の動的置換は呼び出し側で行います。
+- **送信元メールアドレス**: Cloudflare 上で所有・管理（Email Routing 設定済み）しているカスタムドメインのアドレス `SENDER_EMAIL_ADDRESS`（例: `noreply@yourdomain.com`）を使用する。
+- **完全無料（$0）仕様**: Cloudflare Dashboard > **Email Routing** > **Destination Addresses** にて事前認証（Verify）が完了している送信先メールアドレス（本人通知先 `OWNER_EMAIL_ADDRESS` および死後通知先 `KIN_EMAIL_ADDRESS`）宛てに送信する場合、Workers Free プランを含むすべてのプランで送信数上限のカウント対象外（完全無料）で直接送信可能。
+- **複数宛先配信・エラー処理**: `OWNER_EMAIL_ADDRESS` および `KIN_EMAIL_ADDRESS` は区切り文字（カンマ・セミコロン）で複数指定可能。パース・重複排除のうえ `Promise.allSettled` で並列送信し、1件以上の成功で送信完了日時（`warning_sent_at` / `dead_sent_at`）を記録する（失敗した宛先はエラーログを出力）。
+- **単一責任設計**: `sendEmail` 関数は `env.EMAIL_SEND`（送信バインディング）のみを引数として受け取り、環境変数全体（`Env`）に依存しない独立モジュールとして動作する。本文中のプレースホルダー（`${BASE_URL}` 等）の動的置換は呼び出し側で行う。
 
 ## 7. 設定・環境変数設計
 
-本プロジェクトの運用環境変数は、すべて [wrangler.jsonc](../wrangler.jsonc)（Git 管理対象外）の `vars` セクションにて一元管理されます。
+本プロジェクトの運用環境変数は、すべて [wrangler.jsonc](../wrangler.jsonc)（Git 管理対象外）の `vars` セクションにて一元管理される。
 
 ### 環境変数（`vars`）一覧
 
 - `BASE_URL`: システムの展開先 URL（チェックインページ URL の組み立てに使用）
 - `SENDER_EMAIL_ADDRESS`: 送信元メールアドレス
 - `VAPID_SUBJECT`: Web Push VAPID 連絡先（例: `mailto:owner@example.com`）
-- `OWNER_EMAIL_ADDRESS`: 本人通知先メールアドレス（生存確認リマインダーの受取先）
-- `KIN_EMAIL_ADDRESS`: 死後通知先メールアドレス（手続案内・メッセージの受取先）
+- `OWNER_EMAIL_ADDRESS`: 本人通知先メールアドレス（生存確認リマインダーの受取先、カンマ区切りで複数指定可能）
+- `KIN_EMAIL_ADDRESS`: 死後通知先メールアドレス（手続案内・メッセージの受取先、カンマ区切りで複数指定可能）
 - `VAPID_PUBLIC_KEY` / `VAPID_PRIVATE_KEY`: Web Push 送信・認証用 VAPID 鍵ペア
 - `WARNING_DAYS`: 生存確認リマインダーを発動する不活動日数（デフォルト: 7日）
 - `DEAD_DAYS`: 死後処理を発動する通算不活動日数（デフォルト: 14日）
 - `WARNING_EMAIL_SUBJECT` / `WARNING_EMAIL_BODY`: 生存確認リマインダーメールの件名および本文テンプレート
 - `DEAD_EMAIL_SUBJECT` / `DEAD_EMAIL_BODY`: 死後通知メールの件名および本文テンプレート
 
-設定ファイルのテンプレート（[wrangler.jsonc.example](../wrangler.jsonc.example)）およびセットアップ手順の詳細については [README.md](../README.md) を参照してください。
+設定ファイルのテンプレート（[wrangler.jsonc.example](../wrangler.jsonc.example)）およびセットアップ手順の詳細については [README.md](../README.md) を参照。

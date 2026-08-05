@@ -22,7 +22,7 @@ Cloudflare Workers 上で稼働する、個人専用のセルフホスト型死�
 
 ### 1. 事前準備
 
-1. **送信先メールアドレスの承認**
+1. **送信先メールアドレスの認証**
    - Cloudflare Dashboard > **Email Routing** > **Destination Addresses** にて、送信先メールアドレスとなる本人通知先メールアドレス（`OWNER_EMAIL_ADDRESS`）および死後通知先メールアドレス（`KIN_EMAIL_ADDRESS`）を追加します。
    - 送信された確認メール内の認証リンクをクリックし、ステータスを `Verified`（認証済み）にします。
 2. **送信元メールアドレスの決定**
@@ -84,8 +84,8 @@ Cloudflare Workers 上で稼働する、個人専用のセルフホスト型死�
 | `BASE_URL` | Workers 展開先 URL（チェックイン URL の組み立てに使用） | `https://dead-mans-switch.<subdomain>.workers.dev` | **必須** |
 | `SENDER_EMAIL_ADDRESS` | 送信元メールアドレス（事前認証済みドメインのアドレス） | `noreply@yourdomain.com` | **必須** |
 | `VAPID_SUBJECT` | Web Push 用 VAPID 連絡先（`mailto:本人メールアドレス`） | `mailto:owner@example.com` | **必須** |
-| `OWNER_EMAIL_ADDRESS` | 本人通知先メールアドレス（生存確認リマインダーの受取先） | 事前に Destination Addresses で承認済みの本人アドレス | **必須** |
-| `KIN_EMAIL_ADDRESS` | 死後通知先メールアドレス（手続案内・メッセージの受取先） | 事前に Destination Addresses で承認済みの受取人アドレス | **必須** |
+| `OWNER_EMAIL_ADDRESS` | 本人通知先メールアドレス（生存確認リマインダーの受取先、カンマ区切りで複数指定可能） | 事前に Destination Addresses で承認済みの本人アドレス（例: `owner1@example.com, owner2@example.com`） | **必須** |
+| `KIN_EMAIL_ADDRESS` | 死後通知先メールアドレス（手続案内・メッセージの受取先、カンマ区切りで複数指定可能） | 事前に Destination Addresses で承認済みの受取人アドレス（例: `kin1@example.com, kin2@example.com`） | **必須** |
 | `VAPID_PUBLIC_KEY` | Web Push 通知用の Public Key | 事前準備手順で生成した Public Key | **必須** |
 | `VAPID_PRIVATE_KEY` | Web Push 通知用の Private Key | 事前準備手順で生成した Private Key | **必須** |
 | `WARNING_DAYS` | 生存確認リマインダー（メール＋Web Push）を送信する不活動日数 | `"7"`（7日経過後） | 任意 |
