@@ -274,10 +274,15 @@ describe('Scheduled Cron Trigger (src/services/cron.ts)', () => {
 
   it('should validate WARNING_DAYS and DEAD_DAYS configuration', async () => {
     env.WARNING_DAYS = 'invalid';
+    await expect(processScheduledCheck(env)).rejects.toThrow(TypeError);
     await expect(processScheduledCheck(env)).rejects.toThrow('WARNING_DAYS and DEAD_DAYS must be valid integers');
+
+    env.WARNING_DAYS = '7.5';
+    await expect(processScheduledCheck(env)).rejects.toThrow(TypeError);
 
     env.WARNING_DAYS = '14';
     env.DEAD_DAYS = '7';
+    await expect(processScheduledCheck(env)).rejects.toThrow(RangeError);
     await expect(processScheduledCheck(env)).rejects.toThrow('WARNING_DAYS must be strictly less than DEAD_DAYS');
   });
 

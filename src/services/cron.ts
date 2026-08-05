@@ -4,17 +4,17 @@ import { getSystemData, saveSystemData } from './kv';
 import { sendNotificationToAll } from './push';
 
 export async function processScheduledCheck(env: Env): Promise<SystemData> {
-  const warningDays = Number.parseInt(env.WARNING_DAYS, 10);
-  const deadDays = Number.parseInt(env.DEAD_DAYS, 10);
+  const warningDays = Number(env.WARNING_DAYS);
+  const deadDays = Number(env.DEAD_DAYS);
 
-  if (Number.isNaN(warningDays) || Number.isNaN(deadDays)) {
-    throw new Error('WARNING_DAYS and DEAD_DAYS must be valid integers');
+  if (!Number.isInteger(warningDays) || !Number.isInteger(deadDays)) {
+    throw new TypeError('WARNING_DAYS and DEAD_DAYS must be valid integers');
   }
   if (warningDays <= 0 || deadDays <= 0) {
-    throw new Error('WARNING_DAYS and DEAD_DAYS must be greater than 0');
+    throw new RangeError('WARNING_DAYS and DEAD_DAYS must be greater than 0');
   }
   if (warningDays >= deadDays) {
-    throw new Error('WARNING_DAYS must be strictly less than DEAD_DAYS');
+    throw new RangeError('WARNING_DAYS must be strictly less than DEAD_DAYS');
   }
 
   const data = await getSystemData(env.DMS_KV);
