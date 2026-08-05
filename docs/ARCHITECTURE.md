@@ -8,7 +8,7 @@
 | **フレームワーク** | Hono (v4.x) | 軽量 Web フレームワーク |
 | **認証・アクセス制御** | Cloudflare Zero Trust | `/checkin` ページの本人認証・保護（Google/Passkey） |
 | **実行基盤** | Cloudflare Workers | サーバーレスランタイム (Wrangler v4, `nodejs_compat`) |
-| **静的アセット配信** | Cloudflare Workers Static Assets | `public/sw.js` (Service Worker) の静的自動配信 |
+| **静的アセット配信** | Cloudflare Workers Static Assets | `public/sw.js`（Service Worker）、`public/style.css` の静的自動配信 |
 | **ストレージ** | Cloudflare KV (`DMS_KV`) | 状態・タイムスタンプ・複数端末 Web Push サブスク保存 |
 | **定時実行** | Cloudflare Cron Triggers | 日次判定処理 (`0 0 * * *`) |
 | **本人通知** | Email Send + Web Push (VAPID / SW) | 生存確認リマインダー配信（メール + 全端末への Web Push 同時配信） |
@@ -28,6 +28,7 @@ dead-mans-switch/
 ├── wrangler.jsonc.example    # 設定・非機密環境変数テンプレート（wrangler.jsonc は git 管理対象外）
 ├── vitest.config.ts          # Vitest 設定
 ├── public/
+│   ├── style.css             # ダッシュボード・ロックアウト画面用スタイルシート
 │   └── sw.js                 # Service Worker（Web Push 受信 & /checkin 画面起動、Workers Assets で自動配信）
 ├── src/
 │   ├── index.ts              # メインエントリポイント（Hono API + Cron）

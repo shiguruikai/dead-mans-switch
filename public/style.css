@@ -1,0 +1,220 @@
+:root {
+  --font-family: sans-serif;
+
+  /* Dashboard Colors */
+  --bg-dashboard: #0f172a;
+  --card-bg-dashboard: #1e293b;
+  --border-dashboard: #334155;
+  --text-primary-dashboard: #f8fafc;
+  --text-secondary-dashboard: #94a3b8;
+  --text-val-dashboard: #e2e8f0;
+  --title-dashboard: #38bdf8;
+
+  /* Status Colors */
+  --badge-normal-bg: #059669;
+  --badge-normal-text: #ecfdf5;
+  --badge-warning-bg: #d97706;
+  --badge-warning-text: #fffbeb;
+  --badge-dead-bg: #cf6679;
+  --badge-dead-text: #000000;
+
+  /* Button Colors */
+  --btn-primary-bg: #0284c7;
+  --btn-primary-hover: #0369a1;
+  --btn-secondary-bg: #334155;
+  --btn-secondary-hover: #475569;
+  --btn-danger-bg: #7f1d1d;
+  --btn-danger-hover: #991b1b;
+
+  /* Message Colors */
+  --msg-success-bg: #065f46;
+  --msg-success-text: #a7f3d0;
+  --msg-error-bg: #991b1b;
+  --msg-error-text: #fecaca;
+
+  /* Dead Page Colors */
+  --bg-dead: #121212;
+  --card-bg-dead: #1e1e1e;
+  --border-dead: #cf6679;
+  --title-dead: #cf6679;
+  --text-dead: #b0b0b0;
+}
+
+body {
+  font-family: var(--font-family);
+  background-color: var(--bg-dashboard);
+  color: var(--text-primary-dashboard);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  margin: 0;
+  padding: 1rem;
+  box-sizing: border-box;
+}
+
+body.dead-page {
+  background-color: var(--bg-dead);
+  color: #e0e0e0;
+}
+
+.card {
+  background: var(--card-bg-dashboard);
+  border: 1px solid var(--border-dashboard);
+  border-radius: 16px;
+  padding: 2rem;
+  max-width: 520px;
+  width: 100%;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+}
+
+.card-dead {
+  background: var(--card-bg-dead);
+  border-color: var(--border-dead);
+  border-radius: 12px;
+  max-width: 480px;
+  text-align: center;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+}
+
+.header {
+  text-align: center;
+  border-bottom: 1px solid var(--border-dashboard);
+  padding-bottom: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+h1 {
+  font-size: 1.5rem;
+  margin: 0 0 0.5rem 0;
+  color: var(--title-dashboard);
+}
+
+.card-dead h1 {
+  color: var(--title-dead);
+  margin-top: 0;
+}
+
+p {
+  line-height: 1.6;
+  color: var(--text-dead);
+}
+
+.badge {
+  display: inline-block;
+  padding: 0.35rem 0.85rem;
+  border-radius: 9999px;
+  font-weight: bold;
+  font-size: 0.875rem;
+  text-transform: uppercase;
+}
+
+.badge-NORMAL {
+  background: var(--badge-normal-bg);
+  color: var(--badge-normal-text);
+}
+
+.badge-WARNING {
+  background: var(--badge-warning-bg);
+  color: var(--badge-warning-text);
+}
+
+.badge-DEAD,
+.badge-dead {
+  background: var(--badge-dead-bg);
+  color: var(--badge-dead-text);
+  padding: 0.25rem 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.info-group {
+  margin-bottom: 1.5rem;
+  background: var(--bg-dashboard);
+  padding: 1rem;
+  border-radius: 8px;
+  font-size: 0.95rem;
+}
+
+.info-row {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 0.5rem;
+}
+
+.info-row:last-child {
+  margin-bottom: 0;
+}
+
+.label {
+  color: var(--text-secondary-dashboard);
+}
+
+.val {
+  font-weight: 600;
+  color: var(--text-val-dashboard);
+}
+
+.btn {
+  display: block;
+  width: 100%;
+  padding: 0.85rem;
+  border: none;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: background-color 0.2s ease, transform 0.1s ease;
+  margin-bottom: 0.75rem;
+  text-align: center;
+  box-sizing: border-box;
+}
+
+.btn:active {
+  transform: scale(0.98);
+}
+
+.btn-primary {
+  background: var(--btn-primary-bg);
+  color: #ffffff;
+}
+
+.btn-primary:hover {
+  background: var(--btn-primary-hover);
+}
+
+.btn-secondary {
+  background: var(--btn-secondary-bg);
+  color: var(--text-primary-dashboard);
+}
+
+.btn-secondary:hover {
+  background: var(--btn-secondary-hover);
+}
+
+.btn-danger {
+  background: var(--btn-danger-bg);
+  color: #fecaca;
+}
+
+.btn-danger:hover {
+  background: var(--btn-danger-hover);
+}
+
+.msg {
+  margin-top: 1rem;
+  padding: 0.75rem;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  text-align: center;
+  display: none;
+}
+
+.msg-success {
+  background: var(--msg-success-bg);
+  color: var(--msg-success-text);
+}
+
+.msg-error {
+  background: var(--msg-error-bg);
+  color: var(--msg-error-text);
+}

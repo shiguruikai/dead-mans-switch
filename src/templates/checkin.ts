@@ -9,17 +9,11 @@ export function renderDeadPage() {
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Dead Man's Switch - システムロックアウト</title>
-  <style>
-    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background-color: #121212; color: #e0e0e0; display: flex; align-items: center; justify-content: center; min-height: 100vh; margin: 0; padding: 1rem; }
-    .card { background: #1e1e1e; border: 1px solid #cf6679; border-radius: 12px; padding: 2rem; max-width: 480px; width: 100%; text-align: center; box-shadow: 0 4px 20px rgba(0,0,0,0.5); }
-    h1 { color: #cf6679; font-size: 1.5rem; margin-top: 0; }
-    p { line-height: 1.6; color: #b0b0b0; }
-    .badge { display: inline-block; padding: 0.25rem 0.75rem; border-radius: 9999px; font-weight: bold; background: #cf6679; color: #000; margin-bottom: 1rem; }
-  </style>
+  <link rel="stylesheet" href="/style.css">
 </head>
-<body>
-  <div class="card">
-    <div class="badge">DEAD</div>
+<body class="dead-page">
+  <div class="card card-dead">
+    <div class="badge badge-dead">DEAD</div>
     <h1>死後通知送信完了（システムロックアウト中）</h1>
     <p>不活動期間経過により死後通知の自動送信が完了しました。<br>本システムはロックアウトされており、復帰および通知変更操作は行えません。</p>
   </div>
@@ -39,30 +33,7 @@ export function renderDashboardPage(data: SystemData, vapidPublicKey: string) {
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Dead Man's Switch - 生存確認ダッシュボード</title>
-  <style>
-    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background-color: #0f172a; color: #f8fafc; display: flex; align-items: center; justify-content: center; min-height: 100vh; margin: 0; padding: 1rem; }
-    .card { background: #1e293b; border: 1px solid #334155; border-radius: 16px; padding: 2rem; max-width: 520px; width: 100%; box-shadow: 0 10px 25px rgba(0,0,0,0.3); }
-    .header { text-align: center; border-bottom: 1px solid #334155; padding-bottom: 1rem; margin-bottom: 1.5rem; }
-    h1 { font-size: 1.5rem; margin: 0 0 0.5rem 0; color: #38bdf8; }
-    .badge { display: inline-block; padding: 0.35rem 0.85rem; border-radius: 9999px; font-weight: bold; font-size: 0.875rem; text-transform: uppercase; }
-    .badge-NORMAL { background: #059669; color: #ecfdf5; }
-    .badge-WARNING { background: #d97706; color: #fffbeb; }
-    .info-group { margin-bottom: 1.5rem; background: #0f172a; padding: 1rem; border-radius: 8px; font-size: 0.95rem; }
-    .info-row { display: flex; justify-content: space-between; margin-bottom: 0.5rem; }
-    .info-row:last-child { margin-bottom: 0; }
-    .label { color: #94a3b8; }
-    .val { font-weight: 600; color: #e2e8f0; }
-    .btn { display: block; width: 100%; padding: 0.85rem; border: none; border-radius: 8px; font-weight: 600; font-size: 1rem; cursor: pointer; transition: background 0.2s; margin-bottom: 0.75rem; text-align: center; }
-    .btn-primary { background: #0284c7; color: #ffffff; }
-    .btn-primary:hover { background: #0369a1; }
-    .btn-secondary { background: #334155; color: #f8fafc; }
-    .btn-secondary:hover { background: #475569; }
-    .btn-danger { background: #7f1d1d; color: #fecaca; }
-    .btn-danger:hover { background: #991b1b; }
-    .msg { margin-top: 1rem; padding: 0.75rem; border-radius: 6px; font-size: 0.9rem; text-align: center; display: none; }
-    .msg-success { background: #065f46; color: #a7f3d0; }
-    .msg-error { background: #991b1b; color: #fecaca; }
-  </style>
+  <link rel="stylesheet" href="/style.css">
 </head>
 <body>
   <div class="card">
