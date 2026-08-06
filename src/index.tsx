@@ -2,9 +2,11 @@ import { zValidator } from '@hono/zod-validator';
 import type { Context } from 'hono';
 import { Hono } from 'hono';
 import { jsxRenderer } from 'hono/jsx-renderer';
-import { Link, ViteClient } from 'vite-ssr-components/hono';
+import { Link, Script, ViteClient } from 'vite-ssr-components/hono';
 import * as z from 'zod';
 
+import { CheckInPage } from '@/pages/CheckIn';
+import { DeadPage } from '@/pages/Dead';
 import { processScheduledCheck } from '@/services/cron';
 import {
   addPushSubscription,
@@ -15,8 +17,6 @@ import {
 import type { Env } from '@/types';
 import { SystemLockedError } from '@/types';
 import { getDaysSince } from '@/utils/date';
-import { CheckInPage } from '@/views/check-in';
-import { DeadPage } from '@/views/dead';
 
 const handlePing = async (c: Context<{ Bindings: Env }>) => {
   const updated = await updateActivity(c.env.DMS_KV);
@@ -42,10 +42,11 @@ const app = new Hono<{ Bindings: Env }>()
     jsxRenderer(({ children }) => (
       <html lang="ja">
         <head>
-          <meta charSet="UTF-8" />
+          <meta charset="UTF-8" />
           <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-          <Link href="/public/style.css" rel="stylesheet" />
           <ViteClient />
+          <Link href="/public/style.css" rel="stylesheet" />
+          <Script src="/src/client.tsx" type="module" />
         </head>
         <body>{children}</body>
       </html>
@@ -60,9 +61,9 @@ const app = new Hono<{ Bindings: Env }>()
         return c.render(<DeadPage />);
       }
 
-      const vapidPublicKey = c.env.VAPID_PUBLIC_KEY || '';
-      return c.render(<CheckInPage data={data} vapidPublicKey={vapidPublicKey} />);
-    })
+      return c.render(<CheckInPage data={data} vapidPublicKey={c.env.VAPID_PUBLIC_KEY} />);
+    },
+  )
 
   .post('/ping', handlePing)
 
@@ -70,58 +71,65 @@ const app = new Hono<{ Bindings: Env }>()
 
   .post(
     '/api/push/subscribe',
-    zValidator('json', z.object({
-      endpoint: z.string(),
-      keys: z.object({
-        p256dh: z.string(),
-        auth: z.string(),
+    zValidator(
+      'json',
+      z.object({
+        endpoint: z.url(),
+        keys: z.object({
+          p256dh: z.string().min(1),
+          auth: z.string().min(1),
+        }),
       }),
-    })),
+    ),
     async (c) => {
-      const body = c.req.valid('json');
-      const updated = await addPushSubscription(c.env.DMS_KV, body);
+      const sub = c.req.valid('json');
+      const updated = await addPushSubscription(c.env.DMS_KV, sub);
       return c.json({
         success: true,
         total_devices: updated.push_subscriptions.length,
       });
-    })
+    },
+  )
 
   .delete(
     '/api/push/subscribe',
-    zValidator('json', z.object({
-      endpoint: z.string(),
-    })),
+    zValidator(
+      'json',
+      z.object({
+        endpoint: z.url(),
+      }),
+    ),
     async (c) => {
-      const body = c.req.valid('json');
-      const updated = await removePushSubscription(c.env.DMS_KV, body.endpoint);
+      const { endpoint } = c.req.valid('json');
+      const updated = await removePushSubscription(c.env.DMS_KV, endpoint);
       return c.json({
         success: true,
         total_devices: updated.push_subscriptions.length,
       });
-    })
+    },
+  )
 
   .get(
     '/api/status',
     async (c) => {
       const data = await getSystemData(c.env.DMS_KV);
-      const daysSinceActive = getDaysSince(data.last_active_at);
       return c.json({
         status: data.status,
         last_active_at: data.last_active_at,
-        days_since_active: daysSinceActive,
+        days_since_active: getDaysSince(data.last_active_at),
         warning_sent_at: data.warning_sent_at,
         dead_sent_at: data.dead_sent_at,
         push_subscriptions_count: data.push_subscriptions.length,
       });
-    });
-
-export { app };
+    },
+  );
 
 export type AppType = typeof app;
+export { app };
 
 export default {
   fetch: app.fetch,
-  scheduled(event: ScheduledEvent, env: Env, ctx: ExecutionContext) {
-    ctx.waitUntil(processScheduledCheck(env));
+  async scheduled(_event: ScheduledEvent, env: Env, _ctx: ExecutionContext): Promise<void> {
+    await processScheduledCheck(env);
   },
 };

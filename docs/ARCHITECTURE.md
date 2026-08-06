@@ -21,35 +21,40 @@
 
 ```text
 dead-mans-switch/
-├── README.md                 # 概要と環境構築・デプロイ手順
+├── README.md                  # 概要と環境構築・デプロイ手順
 ├── docs/
-│   ├── REQUIREMENTS.md       # 要件定義書
-│   └── ARCHITECTURE.md       # アーキテクチャ・詳細設計書（本書）
-├── package.json              # 依存関係定義
-├── tsconfig.json             # TypeScript設定
-├── vite.config.ts            # Vite + Cloudflare 開発・ビルド設定
-├── wrangler.jsonc.example    # 設定・非機密環境変数テンプレート（wrangler.jsonc は git 管理対象外）
-├── vitest.config.ts          # Vitest 設定
+│   ├── REQUIREMENTS.md        # 要件定義書
+│   └── ARCHITECTURE.md        # アーキテクチャ・詳細設計書（本書）
+├── package.json               # 依存関係定義
+├── tsconfig.json              # TypeScript設定
+├── vite.config.ts             # Vite + Cloudflare 開発・ビルド設定
+├── wrangler.jsonc.example     # 設定・非機密環境変数テンプレート（wrangler.jsonc は git 管理対象外）
+├── vitest.config.ts           # Vitest 設定
 ├── public/
-│   ├── style.css             # 生存確認・ロックアウト画面用スタイルシート
-│   └── sw.js                 # Service Worker（Web Push 受信 & / 画面起動、Workers Assets で自動配信）
+│   ├── style.css              # 生存確認・ロックアウト画面用スタイルシート
+│   └── sw.js                  # Service Worker（Web Push 受信 & / 画面起動、Workers Assets で自動配信）
 ├── src/
-│   ├── index.tsx             # メインエントリポイント（Hono API + JSX レンダラー + Cron）
-│   ├── types.ts              # 型定義（SystemLockedError 等）
+│   ├── index.tsx              # メインエントリポイント（Hono API + jsxRenderer + Cron）
+│   ├── client.tsx             # ブラウザ専用ハイドレーションエントリ
+│   ├── types.ts               # 型定義（SystemLockedError 等）
+│   ├── lib/
+│   │   └── island.tsx         # <Island> コンポーネント
+│   ├── islands/               # CSR コンポーネント
+│   │   └── CheckInContent.tsx
+│   ├── pages/                 # SSR ページコンポーネント
+│   │   ├── CheckIn.tsx        # 生存確認画面 SSR ページ
+│   │   └── Dead.tsx           # 死後通知送信完了（システムロックアウト） SSR ページ
 │   ├── utils/
-│   │   └── date.ts           # 日付・時間計算ユーティリティ
-│   ├── views/                # Hono/JSX サーバービューコンポーネント
-│   │   ├── check-in.tsx      # 生存確認画面 JSX ビュー & クライアントロジック & DOM マウント
-│   │   └── dead.tsx          # 死後通知送信完了（システムロックアウト） JSX ビュー
+│   │   └── date.ts            # 日付・時間計算ユーティリティ
 │   └── services/
-│       ├── push.ts           # Web Push (VAPID) 送信モジュール
-│       ├── email.ts          # メール送信モジュール（Cloudflare Email Send）
-│       ├── kv.ts             # KV 操作モジュール
-│       └── cron.ts           # 定時チェック・判定・無効端末クリーンアップモジュール
+│       ├── push.ts            # Web Push (VAPID) 送信モジュール
+│       ├── email.ts           # メール送信モジュール
+│       ├── kv.ts              # KV 操作モジュール
+│       └── cron.ts            # 定時チェック・判定・無効端末クリーンアップモジュール
 └── test/
-    ├── index.test.ts         # システム・API 自動テスト
+    ├── index.test.ts          # システム・API 自動テスト
     └── utils/
-        └── date.test.ts      # 日付ユーティリティ単体テスト
+        └── date.test.ts       # 日付ユーティリティ単体テスト
 ```
 
 ## 3. KV データ設計（`DMS_KV`）

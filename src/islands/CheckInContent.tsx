@@ -1,11 +1,10 @@
 import { hc } from 'hono/client';
 import { useEffect, useState } from 'hono/jsx';
-import { render } from 'hono/jsx/dom';
-import { Script } from 'vite-ssr-components/hono';
 
-import { AppType } from '@/index';
+import type { AppType } from '@/index';
 import type { SystemData } from '@/types';
 import { formatJapaneseDateTime, getDaysSince } from '@/utils/date';
+
 function extractErrorMessage(data: unknown, fallback: string): string {
   if (data && typeof data === 'object' && 'error' in data && typeof data.error === 'string') {
     return data.error;
@@ -13,12 +12,12 @@ function extractErrorMessage(data: unknown, fallback: string): string {
   return fallback;
 }
 
-export interface CheckInProps {
+export interface CheckInContentProps {
   data: SystemData;
   vapidPublicKey: string;
 }
 
-function CheckInContent({ data: initialData, vapidPublicKey }: Readonly<CheckInProps>) {
+export function CheckInContent({ data: initialData, vapidPublicKey }: Readonly<CheckInContentProps>) {
   const client = hc<AppType>('/');
   const [systemData, setSystemData] = useState<SystemData>(initialData);
   const [deviceCount, setDeviceCount] = useState<number>(initialData.push_subscriptions.length);
@@ -126,7 +125,7 @@ function CheckInContent({ data: initialData, vapidPublicKey }: Readonly<CheckInP
         const resData = await res.json();
         setMsg({ text: extractErrorMessage(resData, 'サーバーでの解除処理に失敗しました。'), isError: true });
       }
-    } catch (e) {
+    } catch (e: unknown) {
       const errMsg = e instanceof Error ? e.message : String(e);
       setMsg({ text: `解除処理エラー: ${errMsg}`, isError: true });
     }
@@ -172,21 +171,4 @@ function CheckInContent({ data: initialData, vapidPublicKey }: Readonly<CheckInP
       )}
     </div>
   );
-}
-
-export function CheckInPage({ data, vapidPublicKey }: Readonly<CheckInProps>) {
-  return (
-    <>
-      <div id="root" data-props={JSON.stringify({ data, vapidPublicKey })}></div>
-      <Script type="module" src="/src/views/check-in.tsx" />
-    </>
-  );
-}
-
-if (typeof window !== 'undefined') {
-  const root = document.getElementById('root');
-  if (root?.dataset.props) {
-    const props = JSON.parse(root.dataset.props) as CheckInProps;
-    render(<CheckInContent {...props} />, root);
-  }
 }
