@@ -163,18 +163,7 @@ describe('Hono API エンドポイント（src/index.tsx）', () => {
     expect(html).not.toContain('pingBtn');
   });
 
-  it('POST /ping は生存報告を受理してアクティビティを更新すること', async () => {
-    const client = testClient(app, env);
-    const res = await client.ping.$post();
-    expect(res.status).toBe(200);
-    expect(await res.json()).toEqual({
-      success: true,
-      status: 'NORMAL',
-      last_active_at: expect.any(String),
-    });
-  });
-
-  it('POST /api/ping は外部スクリプトからの生存報告を受理すること', async () => {
+  it('POST /api/ping は生存報告を受理してアクティビティを更新すること', async () => {
     const client = testClient(app, env);
     const res = await client.api.ping.$post();
     expect(res.status).toBe(200);

@@ -65,8 +65,6 @@ const app = new Hono<{ Bindings: Env }>()
     },
   )
 
-  .post('/ping', handlePing)
-
   .post('/api/ping', handlePing)
 
   .post(

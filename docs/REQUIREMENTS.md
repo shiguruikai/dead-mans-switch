@@ -15,9 +15,9 @@
 ```mermaid
 stateDiagram-v2
     [*] --> NORMAL: 初期化
-    NORMAL --> NORMAL: /api/ping または /ping 受信（last_active_at 更新）
+    NORMAL --> NORMAL: /api/ping 受信（last_active_at 更新）
     NORMAL --> WARNING: WARNING_DAYS 経過（リマインダー送信）
-    WARNING --> NORMAL: /ping または /api/ping 受信（warning_sent_at リセット）
+    WARNING --> NORMAL: /api/ping 受信（warning_sent_at リセット）
     WARNING --> DEAD: DEAD_DAYS 経過（死後通知送信）
     DEAD --> [*]: ロックアウト（復帰不可）
 ```
@@ -38,11 +38,9 @@ stateDiagram-v2
   - 生存確認画面を返却する（Hono/JSX による SSR ＋ Vite クライアントスクリプト）。
   - 現在のステータス、最終生存確認日時（`<time>` タグとして SSR 出力し、クライアントサイドで閲覧ユーザーのブラウザタイムゾーンへ自動変換表示）、最終生存確認日からの経過日数、Web Push 購読状況を表示する。
   - `DEAD` 状態時はステータス変更ボタンを非活性化し、ロックアウト画面を表示する。
-- **`POST /ping`**（Access ユーザー認証）
-  - 画面からの手動生存報告用。`last_active_at` を現在時刻に更新し、`WARNING` の場合は `NORMAL` へ復帰させて `warning_sent_at` を `null` に初期化する。
-  - `DEAD` 状態時は `403 Forbidden` を返却する。
 - **`POST /api/ping`**（Service Token または Access ユーザー認証）
-  - 外部スクリプト等からの自動生存報告用。動作は `POST /ping` と同一。
+  - 手動（生存確認画面）および外部スクリプトからの生存報告用。`last_active_at` を現在時刻に更新し、`WARNING` の場合は `NORMAL` へ復帰させて `warning_sent_at` を `null` に初期化する。
+  - `DEAD` 状態時は `403 Forbidden` を返却する。
 - **`POST /api/push/subscribe`**（Access ユーザー認証）
   - Web Push サブスクリプション情報を KV 内の `push_subscriptions` 配列に追加・更新する（最大20件）。
 - **`DELETE /api/push/subscribe`**（Access ユーザー認証）

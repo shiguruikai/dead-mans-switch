@@ -76,11 +76,10 @@ Cloudflare Dashboard > **Zero Trust** > **Access controls** 設定にてドメ�
 | パス / エンドポイント | 適用される Zero Trust Policy | 詳細 |
 | :--- | :--- | :--- |
 | **`GET /`** | **Allow (User Email / Identity)** | 本人の Google アカウント / Passkey 認証を通したユーザーのみアクセス許可。 |
-| **`POST /ping`** | **Allow (User Email / Identity)** | 生存確認画面からの生存報告 Ping 用。Access ログインセッションで保護。 |
 | **`POST /api/push/subscribe`** | **Allow (User Email / Identity)** | 本人端末からのみ Web Push 登録を許可。 |
 | **`DELETE /api/push/subscribe`** | **Allow (User Email / Identity)** | 本人端末からの Web Push 登録解除を許可。 |
-| **`POST /api/ping`** | **Bypass (Service Token)** | スクリプト等からの自動 Ping 用に Service Token (`CF-Access-Client-Id` / `CF-Access-Client-Secret`) で Access を Bypass。 |
-| **`GET /api/status`** | **Bypass (Service Token)** | デバッグ・外部状態監視用に Service Token で Access を Bypass。 |
+| **`POST /api/ping`** | **Allow / Bypass (Service Token)** | 生存確認画面および外部スクリプト等からの生存報告用。ユーザー認証および Service Token (`CF-Access-Client-Id` / `CF-Access-Client-Secret`) で許可。 |
+| **`GET /api/status`** | **Allow / Bypass (Service Token)** | デバッグ・外部状態監視用に Access ユーザー認証および Service Token で許可。 |
 
 ※ `public/sw.js` は Workers Static Assets (`assets = { directory = "./public" }`) により Hono 側を経由せず静的に自動配信される。
 
@@ -92,21 +91,12 @@ Cloudflare Dashboard > **Zero Trust** > **Access controls** 設定にてドメ�
 - **処理**:
   - `status === "DEAD"` の場合: 「死後通知送信済み（システムロックアウト中）」のメッセージ画面を返却し、復帰ボタン・Web Push 登録操作を完全に無効化する。
   - `status !== "DEAD"` の場合: 現在のステータス（`status`）、最終生存確認日時（`last_active_at`）、警告までの経過日数、Web Push 購読状況を表示する HTML 画面を返却。
-    - 「生存報告を行う」ボタン押下で `POST /ping` を呼び出し `NORMAL` へ復帰・`last_active_at` を更新。
+    - 「生存報告を行う」ボタン押下で `POST /api/ping` を呼び出し `NORMAL` へ復帰・`last_active_at` を更新。
     - 「この端末の Web Push 通知を許可」ボタン押下で Web Push サブスクリプションを取得し `POST /api/push/subscribe` へ送信。
     - 「この端末の Web Push 通知登録を解除」ボタン押下で `DELETE /api/push/subscribe` へ送信。
 - **レスポンス**: `200 OK` (Content-Type: `text/html; charset=utf-8`)
 
-#### 2. `POST /ping`（生存確認画面からの生存報告）
-
-- **認証**: Cloudflare Zero Trust
-- **処理**:
-  1. `status === "DEAD"` の場合は `403 Forbidden` (`{"error": "System locked out (status is DEAD)"}`) を返却。
-  2. `last_active_at` を現在時刻に更新。
-  3. `WARNING` 状態の場合は `NORMAL` へ復帰し、`warning_sent_at` を `null` にクリーンアップ。
-- **レスポンス**: `200 OK` (`{"success": true, "status": "NORMAL", "last_active_at": "..."}`)
-
-#### 3. `POST /api/ping`（外部からの生存報告・生存シグナル受信）
+#### 2. `POST /api/ping`（生存報告・生存シグナル受信）
 
 - **認証**: Cloudflare Zero Trust (Service Token 認証 または Access ユーザー認証)
 - **処理**:
@@ -115,7 +105,7 @@ Cloudflare Dashboard > **Zero Trust** > **Access controls** 設定にてドメ�
   3. `WARNING` 状態の場合は `NORMAL` へ復帰し、`warning_sent_at` を `null` にクリーンアップ。
 - **レスポンス**: `200 OK` (`{"success": true, "status": "NORMAL", "last_active_at": "..."}`)
 
-#### 4. `POST /api/push/subscribe`（Web Push サブスクリプション保存・複数端末対応）
+#### 3. `POST /api/push/subscribe`（Web Push サブスクリプション保存・複数端末対応）
 
 - **認証**: Cloudflare Zero Trust
 - **処理**:
@@ -124,7 +114,7 @@ Cloudflare Dashboard > **Zero Trust** > **Access controls** 設定にてドメ�
   3. 更新された配列を KV に保存。
 - **レスポンス**: `200 OK` (`{"success": true, "total_devices": 2}`)
 
-#### 5. `DELETE /api/push/subscribe`（Web Push サブスクリプション削除）
+#### 4. `DELETE /api/push/subscribe`（Web Push サブスクリプション削除）
 
 - **認証**: Cloudflare Zero Trust
 - **処理**:
@@ -132,7 +122,7 @@ Cloudflare Dashboard > **Zero Trust** > **Access controls** 設定にてドメ�
   2. KV の `push_subscriptions` 配列から対象 `endpoint` のサブスクリプションを削除して KV を更新。
 - **レスポンス**: `200 OK` (`{"success": true, "total_devices": 1}`)
 
-#### 6. `GET /api/status`（状態確認 API）
+#### 5. `GET /api/status`（状態確認 API）
 
 - **認証**: Cloudflare Zero Trust (Service Token 認証 または Access ユーザー認証)
 - **レスポンス**: `200 OK` (`{"status": "NORMAL", "days_since_active": 0, ...}`)
