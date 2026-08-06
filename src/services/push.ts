@@ -1,6 +1,7 @@
-import webpush from 'web-push';
+import type { PushSubscription, RequestOptions } from 'web-push';
+import { sendNotification as sendNotification_ } from 'web-push';
 
-import type { Env, PushSubscription } from '@/types';
+import type { Env } from '@/types';
 
 export interface PushResult {
   endpoint: string;
@@ -20,7 +21,7 @@ export async function sendNotification(
   subscription: PushSubscription,
   payload: string | PushPayload,
 ): Promise<PushResult> {
-  const options: webpush.RequestOptions = {
+  const options: RequestOptions = {
     vapidDetails: {
       subject: env.VAPID_SUBJECT,
       publicKey: env.VAPID_PUBLIC_KEY,
@@ -31,7 +32,7 @@ export async function sendNotification(
   const payloadString = typeof payload === 'string' ? payload : JSON.stringify(payload);
 
   try {
-    const res = await webpush.sendNotification(subscription, payloadString, options);
+    const res = await sendNotification_(subscription, payloadString, options);
     return {
       endpoint: subscription.endpoint,
       success: true,

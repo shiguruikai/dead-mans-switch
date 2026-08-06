@@ -1,4 +1,5 @@
 import type { KVNamespace } from '@cloudflare/workers-types';
+import type { PushSubscription } from 'web-push';
 
 export type SystemStatus = 'NORMAL' | 'WARNING' | 'DEAD';
 
@@ -9,16 +10,6 @@ export class SystemLockedError extends Error {
   }
 }
 
-export interface PushSubscriptionKeys {
-  p256dh: string;
-  auth: string;
-}
-
-export interface PushSubscription {
-  endpoint: string;
-  keys: PushSubscriptionKeys;
-}
-
 export interface SystemData {
   status: SystemStatus;
   last_active_at: string;
@@ -27,24 +18,12 @@ export interface SystemData {
   push_subscriptions: PushSubscription[];
 }
 
-export interface EmailMessageBuilder {
-  to: string;
-  from: string;
-  subject: string;
-  text?: string;
-  html?: string;
-}
-
-export interface EmailSendBinding {
-  send: (message: EmailMessageBuilder) => Promise<unknown>;
-}
-
 export interface Env {
   // KV Namespace
   DMS_KV: KVNamespace;
 
-  // Cloudflare Email Send
-  EMAIL_SEND: EmailSendBinding;
+  // Cloudflare Email agent
+  SEND_EMAIL: SendEmail;
 
   // Environment variables (vars)
   BASE_URL: string;

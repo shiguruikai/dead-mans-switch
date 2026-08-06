@@ -1,11 +1,10 @@
 import { describe, expect, it, vi } from 'vitest';
 
 import { sendEmail } from '@/services/email';
-import type { EmailSendBinding } from '@/types';
 
 describe('メール送信サービス（src/services/email.ts）', () => {
   it('Cloudflare Email Send バインディングを正しいペイロードで呼び出すこと', async () => {
-    const mockEmailSend: EmailSendBinding = {
+    const mockEmailSend: SendEmail = {
       send: vi.fn().mockResolvedValue(undefined),
     };
 

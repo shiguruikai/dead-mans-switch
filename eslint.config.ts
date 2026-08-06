@@ -46,6 +46,9 @@ export default defineConfig([
       // セミコロンは文末に付ける
       '@stylistic/semi-style': ['warn', 'last'],
 
+      // import type を強制する
+      '@typescript-eslint/consistent-type-imports': ['warn'],
+
       // 未使用のインポートおよび変数を unused-imports で一元管理
       '@typescript-eslint/no-unused-vars': 'off',
       'unused-imports/no-unused-imports': 'warn',
@@ -97,6 +100,7 @@ export default defineConfig([
       '@typescript-eslint/no-unsafe-call': 'off',
       '@typescript-eslint/no-unsafe-member-access': 'off',
       '@typescript-eslint/no-unsafe-return': 'off',
+      '@typescript-eslint/unbound-method': 'off',
     },
   },
 ]);

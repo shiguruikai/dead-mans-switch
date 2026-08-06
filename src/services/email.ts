@@ -1,5 +1,3 @@
-import type { EmailSendBinding } from '@/types';
-
 export interface SendEmailOptions {
   from: string;
   to: string;
@@ -32,7 +30,7 @@ export function parseEmailAddresses(rawAddresses: string): string[] {
  * 1件も成功しなかった場合はエラーをスローします。
  */
 export async function sendEmail(
-  emailSend: EmailSendBinding,
+  emailSend: SendEmail,
   options: SendEmailOptions,
 ): Promise<SendEmailResult> {
   const recipients = parseEmailAddresses(options.to);

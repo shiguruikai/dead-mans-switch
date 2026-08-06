@@ -1,4 +1,6 @@
-import type { Env, PushSubscription, SystemData } from '@/types';
+import type { PushSubscription } from 'web-push';
+
+import type { Env, SystemData } from '@/types';
 import { getSecondsSince } from '@/utils/date';
 
 import { sendEmail } from './email';
@@ -89,7 +91,7 @@ async function sendWarningNotifications(
   // 1. Email Warning
   try {
     const text = env.WARNING_EMAIL_BODY.replaceAll('${BASE_URL}', env.BASE_URL);
-    await sendEmail(env.EMAIL_SEND, {
+    await sendEmail(env.SEND_EMAIL, {
       from: env.SENDER_EMAIL_ADDRESS,
       to: env.OWNER_EMAIL_ADDRESS,
       subject: env.WARNING_EMAIL_SUBJECT,
@@ -143,7 +145,7 @@ async function sendDeadNotifications(env: Env, now: Date): Promise<DeadResult> {
 
   try {
     const text = deadBodyTemplate.replaceAll('${BASE_URL}', env.BASE_URL);
-    await sendEmail(env.EMAIL_SEND, {
+    await sendEmail(env.SEND_EMAIL, {
       from: env.SENDER_EMAIL_ADDRESS,
       to: env.KIN_EMAIL_ADDRESS,
       subject: env.DEAD_EMAIL_SUBJECT,

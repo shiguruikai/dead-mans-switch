@@ -1,7 +1,7 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "dead-mans-switch",
-  "main": "src/index.ts",
+  "main": "src/index.tsx",
   "compatibility_date": "2026-08-01",
   "compatibility_flags": [
     "nodejs_compat"
@@ -22,7 +22,7 @@
   ],
   "send_email": [
     {
-      "name": "EMAIL_SEND"
+      "name": "SEND_EMAIL"
     }
   ],
   "vars": {

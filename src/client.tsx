@@ -1,4 +1,5 @@
-import { FC, render } from 'hono/jsx/dom';
+import type { FC } from 'hono/jsx/dom';
+import { render } from 'hono/jsx/dom';
 
 import { isIslandName, islands } from './lib/island';
 

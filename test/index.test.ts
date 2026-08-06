@@ -1,5 +1,6 @@
 import { testClient } from 'hono/testing';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import type { PushSubscription } from 'web-push';
 
 import { app } from '@/index';
 import { processScheduledCheck } from '@/services/cron';
@@ -10,7 +11,7 @@ import {
   saveSystemData,
   updateActivity,
 } from '@/services/kv';
-import type { Env, PushSubscription } from '@/types';
+import type { Env } from '@/types';
 import { SystemLockedError } from '@/types';
 
 // KVNamespace のインメモリ用モック
@@ -40,7 +41,7 @@ class MockKVNamespace {
 function createMockEnv(mockKv: MockKVNamespace): Env {
   return {
     DMS_KV: mockKv as any,
-    EMAIL_SEND: {
+    SEND_EMAIL: {
       send: vi.fn().mockResolvedValue(undefined),
     },
     BASE_URL: 'https://dms.example.com',
@@ -288,7 +289,7 @@ describe('定時実行 Cron タスク（src/services/cron.ts）', () => {
   it('最終アクティビティが最近の場合は NORMAL 状態を維持すること', async () => {
     const result = await processScheduledCheck(env);
     expect(result.status).toBe('NORMAL');
-    expect(env.EMAIL_SEND.send).not.toHaveBeenCalled();
+    expect(env.SEND_EMAIL.send).not.toHaveBeenCalled();
   });
 
   it('無活動期間が 6.5 日以上の場合は WARNING 状態へ遷移すること', async () => {
@@ -300,7 +301,7 @@ describe('定時実行 Cron タスク（src/services/cron.ts）', () => {
     const result = await processScheduledCheck(env);
     expect(result.status).toBe('WARNING');
     expect(result.warning_sent_at).not.toBeNull();
-    expect(env.EMAIL_SEND.send).toHaveBeenCalledTimes(1);
+    expect(env.SEND_EMAIL.send).toHaveBeenCalledTimes(1);
   });
 
   it('WARNING 状態で warning_sent_at が null の場合は警告通知を再試行すること', async () => {
@@ -312,7 +313,7 @@ describe('定時実行 Cron タスク（src/services/cron.ts）', () => {
     const result = await processScheduledCheck(env);
     expect(result.status).toBe('WARNING');
     expect(result.warning_sent_at).not.toBeNull();
-    expect(env.EMAIL_SEND.send).toHaveBeenCalledTimes(1);
+    expect(env.SEND_EMAIL.send).toHaveBeenCalledTimes(1);
   });
 
   it('無活動期間が 13.5 日以上で警告済みの場合 DEAD 状態へ遷移すること', async () => {
@@ -326,7 +327,7 @@ describe('定時実行 Cron タスク（src/services/cron.ts）', () => {
     const result = await processScheduledCheck(env);
     expect(result.status).toBe('DEAD');
     expect(result.dead_sent_at).not.toBeNull();
-    expect(env.EMAIL_SEND.send).toHaveBeenCalledTimes(1);
+    expect(env.SEND_EMAIL.send).toHaveBeenCalledTimes(1);
   });
 
   it('DEAD 状態で dead_sent_at が null の場合は死後通知を再試行すること', async () => {
@@ -338,7 +339,7 @@ describe('定時実行 Cron タスク（src/services/cron.ts）', () => {
     const result = await processScheduledCheck(env);
     expect(result.status).toBe('DEAD');
     expect(result.dead_sent_at).not.toBeNull();
-    expect(env.EMAIL_SEND.send).toHaveBeenCalledTimes(1);
+    expect(env.SEND_EMAIL.send).toHaveBeenCalledTimes(1);
   });
 
   it('複数のメールアドレス設定時に各宛先へ個別送信が行われること', async () => {
@@ -355,16 +356,16 @@ describe('定時実行 Cron タスク（src/services/cron.ts）', () => {
     const result = await processScheduledCheck(env);
     expect(result.status).toBe('DEAD');
     expect(result.dead_sent_at).not.toBeNull();
-    expect(env.EMAIL_SEND.send).toHaveBeenCalledTimes(3);
-    expect(env.EMAIL_SEND.send).toHaveBeenNthCalledWith(1, expect.objectContaining({ to: 'kin1@example.com' }));
-    expect(env.EMAIL_SEND.send).toHaveBeenNthCalledWith(2, expect.objectContaining({ to: 'kin2@example.com' }));
-    expect(env.EMAIL_SEND.send).toHaveBeenNthCalledWith(3, expect.objectContaining({ to: 'kin3@example.com' }));
+    expect(env.SEND_EMAIL.send).toHaveBeenCalledTimes(3);
+    expect(env.SEND_EMAIL.send).toHaveBeenNthCalledWith(1, expect.objectContaining({ to: 'kin1@example.com' }));
+    expect(env.SEND_EMAIL.send).toHaveBeenNthCalledWith(2, expect.objectContaining({ to: 'kin2@example.com' }));
+    expect(env.SEND_EMAIL.send).toHaveBeenNthCalledWith(3, expect.objectContaining({ to: 'kin3@example.com' }));
   });
 
   it('一部の宛先への送信が失敗しても DEAD 状態へ更新完了すること', async () => {
     const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => { /* noop */ });
     env.KIN_EMAIL_ADDRESS = 'kin1@example.com, failed@example.com';
-    env.EMAIL_SEND.send = vi.fn().mockImplementation(({ to }) => {
+    env.SEND_EMAIL.send = vi.fn().mockImplementation(({ to }) => {
       if (to === 'failed@example.com') {
         return Promise.reject(new Error('Failed delivery'));
       }
@@ -381,7 +382,7 @@ describe('定時実行 Cron タスク（src/services/cron.ts）', () => {
     const result = await processScheduledCheck(env);
     expect(result.status).toBe('DEAD');
     expect(result.dead_sent_at).not.toBeNull();
-    expect(env.EMAIL_SEND.send).toHaveBeenCalledTimes(2);
+    expect(env.SEND_EMAIL.send).toHaveBeenCalledTimes(2);
     expect(consoleErrorSpy).toHaveBeenCalled();
     consoleErrorSpy.mockRestore();
   });

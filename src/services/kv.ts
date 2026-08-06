@@ -1,6 +1,7 @@
 import type { KVNamespace } from '@cloudflare/workers-types';
+import type { PushSubscription } from 'web-push';
 
-import type { PushSubscription, SystemData } from '@/types';
+import type { SystemData } from '@/types';
 import { SystemLockedError } from '@/types';
 
 const KV_KEY = 'system_data';

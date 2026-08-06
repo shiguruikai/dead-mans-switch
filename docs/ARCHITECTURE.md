@@ -178,12 +178,12 @@ flowchart TD
 
 ## 6. メール送信モジュール設計
 
-Cloudflare Workers の `send_email` バインディング（`env.EMAIL_SEND`）を利用したメール送信モジュール。具体的な実装コードについては [src/services/email.ts](../src/services/email.ts) を参照。
+Cloudflare Workers の `send_email` バインディング（`env.SEND_EMAIL`）を利用したメール送信モジュール。具体的な実装コードについては [src/services/email.ts](../src/services/email.ts) を参照。
 
 - **送信元メールアドレス**: Cloudflare 上で所有・管理（Email Routing 設定済み）しているカスタムドメインのアドレス `SENDER_EMAIL_ADDRESS`（例: `noreply@yourdomain.com`）を使用する。
 - **完全無料（$0）仕様**: Cloudflare Dashboard > **Email Routing** > **Destination Addresses** にて事前認証（Verify）が完了している送信先メールアドレス（本人通知先 `OWNER_EMAIL_ADDRESS` および死後通知先 `KIN_EMAIL_ADDRESS`）宛てに送信する場合、Workers Free プランを含むすべてのプランで送信数上限のカウント対象外（完全無料）で直接送信可能。
 - **複数宛先配信・エラー処理**: `OWNER_EMAIL_ADDRESS` および `KIN_EMAIL_ADDRESS` は区切り文字（カンマ・セミコロン）で複数指定可能。パース・重複排除のうえ `Promise.allSettled` で並列送信し、1件以上の成功で送信完了日時（`warning_sent_at` / `dead_sent_at`）を記録する（失敗した宛先はエラーログを出力）。
-- **単一責任設計**: `sendEmail` 関数は `env.EMAIL_SEND`（送信バインディング）のみを引数として受け取り、環境変数全体（`Env`）に依存しない独立モジュールとして動作する。本文中のプレースホルダー（`${BASE_URL}` 等）の動的置換は呼び出し側で行う。
+- **単一責任設計**: `sendEmail` 関数は `env.SEND_EMAIL`（送信バインディング）のみを引数として受け取り、環境変数全体（`Env`）に依存しない独立モジュールとして動作する。本文中のプレースホルダー（`${BASE_URL}` 等）の動的置換は呼び出し側で行う。
 
 ## 7. 設定・環境変数設計
 
