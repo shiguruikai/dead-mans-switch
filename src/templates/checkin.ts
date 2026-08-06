@@ -57,8 +57,8 @@ export function renderDashboardPage(data: SystemData, vapidPublicKey: string) {
       </div>
     </div>
 
-    <button id="pingBtn" class="btn btn-primary">手動生存報告（アクティビティ更新）</button>
-    <button id="pushBtn" class="btn btn-secondary">この端末の Web Push 通知を許可 / 更新</button>
+    <button id="pingBtn" class="btn btn-primary">手動で生存報告を行う</button>
+    <button id="pushBtn" class="btn btn-secondary">この端末の Web Push 通知を許可</button>
     <button id="unsubBtn" class="btn btn-danger">この端末の Web Push 通知登録を解除</button>
 
     <div id="msgBox" class="msg"></div>

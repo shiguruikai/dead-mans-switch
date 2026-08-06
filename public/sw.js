@@ -1,7 +1,7 @@
 // Service Worker for Dead Man's Switch Web Push
 self.addEventListener('push', (event) => {
   let title = "【Dead Man's Switch】生存確認リマインダー";
-  let body = 'アクティビティの更新が確認されていません。生存確認を行ってください。';
+  let body = '生存シグナルが途絶えています。生存報告を行ってください。';
   let url = '/checkin';
 
   if (event.data) {

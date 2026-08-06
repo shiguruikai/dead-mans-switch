@@ -45,7 +45,7 @@ function createMockEnv(kv: MockKVNamespace): Env {
     WARNING_DAYS: '7',
     DEAD_DAYS: '14',
     WARNING_EMAIL_SUBJECT: '【重要】生存確認リマインダー',
-    WARNING_EMAIL_BODY: 'アクティビティが途絶えています: ${BASE_URL}/checkin',
+    WARNING_EMAIL_BODY: '生存シグナルが途絶えています: ${BASE_URL}/checkin',
     DEAD_EMAIL_SUBJECT: '【重要通知】手続情報案内',
     VAPID_SUBJECT: 'mailto:owner@example.com',
     SENDER_EMAIL_ADDRESS: 'noreply@yourdomain.com',
@@ -144,7 +144,7 @@ describe('Hono API Endpoints (src/index.ts)', () => {
     const html = await res.text();
     expect(html).toContain('Dead Man\'s Switch');
     expect(html).toContain('NORMAL');
-    expect(html).toContain('手動生存報告');
+    expect(html).toContain('手動で生存報告を行う');
   });
 
   it('GET /checkin returns lockout page for DEAD status', async () => {

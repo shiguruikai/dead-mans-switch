@@ -107,7 +107,7 @@ async function sendWarningNotifications(
       subscriptions,
       {
         title: '【Dead Man\'s Switch】生存確認リマインダー',
-        body: 'アクティビティが途絶えています。生存確認を行ってください。',
+        body: '生存シグナルが途絶えています。生存報告を行ってください。',
         url: '/checkin',
       },
     );
@@ -136,7 +136,7 @@ interface DeadResult {
 async function sendDeadNotifications(env: Env, now: Date): Promise<DeadResult> {
   const deadBodyTemplate
     = env.DEAD_EMAIL_BODY
-      ?? '本通知は Dead Man\'s Switch システムにより自動送信されています。\n規定期間のアクティビティが確認できなかったため、手続情報および案内をお送りいたします。';
+      ?? '本通知は Dead Man\'s Switch システムにより自動送信されています。\n規定期間の生存シグナルが確認できなかったため、手続情報および案内をお送りいたします。';
 
   let deadSentAt: string | null = null;
 

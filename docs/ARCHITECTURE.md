@@ -73,18 +73,18 @@ Cloudflare Dashboard > **Zero Trust** > **Access controls** 設定にてドメ�
 
 ### 4.2. API 詳細仕様
 
-#### 1. `GET /checkin`（生存確認・ステータス確認画面）
+#### 1. `GET /checkin`（生存確認ダッシュボード画面）
 
 - **認証**: Cloudflare Zero Trust
 - **処理**:
   - `status === "DEAD"` の場合: 「死後処理完了済み（システムロックアウト中）」のメッセージ画面を返却し、復帰ボタン・Web Push 登録操作を完全に無効化する。
   - `status !== "DEAD"` の場合: 現在のステータス（`status`）、最終アクティブ日時（`last_active_at`）、警告までの経過日数、Web Push 購読状況を表示する HTML 画面を返却。
-    - 「手動生存報告（アクティビティ更新）」ボタン押下で `POST /checkin/ping` を呼び出し `NORMAL` へ復帰・`last_active_at` を更新。
-    - 「この端末の Web Push 通知を許可 / 更新」ボタン押下で Web Push サブスクリプションを取得し `POST /api/push/subscribe` へ送信。
+    - 「手動で生存報告を行う」ボタン押下で `POST /checkin/ping` を呼び出し `NORMAL` へ復帰・`last_active_at` を更新。
+    - 「この端末の Web Push 通知を許可」ボタン押下で Web Push サブスクリプションを取得し `POST /api/push/subscribe` へ送信。
     - 「この端末の Web Push 通知登録を解除」ボタン押下で `DELETE /api/push/subscribe` へ送信。
 - **レスポンス**: `200 OK` (Content-Type: `text/html; charset=utf-8`)
 
-#### 2. `POST /checkin/ping`（ダッシュボード手動生存報告）
+#### 2. `POST /checkin/ping`（ダッシュボードからの手動生存報告）
 
 - **認証**: Cloudflare Zero Trust
 - **処理**:
@@ -93,7 +93,7 @@ Cloudflare Dashboard > **Zero Trust** > **Access controls** 設定にてドメ�
   3. `WARNING` 状態の場合は `NORMAL` へ復帰し、`warning_sent_at` を `null` にクリーンアップ。
 - **レスポンス**: `200 OK` (`{"success": true, "status": "NORMAL", "last_active_at": "..."}`)
 
-#### 3. `POST /api/ping`（パッシブアクティビティ更新）
+#### 3. `POST /api/ping`（外部からの生存報告・生存シグナル受信）
 
 - **認証**: Cloudflare Zero Trust (Service Token 認証 または Access ユーザー認証)
 - **処理**:
