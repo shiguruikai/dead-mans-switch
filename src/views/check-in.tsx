@@ -3,9 +3,9 @@ import { useEffect, useState } from 'hono/jsx';
 import { render } from 'hono/jsx/dom';
 import { Script } from 'vite-ssr-components/hono';
 
-import { AppType } from '..';
-import type { SystemData } from '../types';
-import { formatJapaneseDateTime, getDaysSince } from '../utils/date';
+import { AppType } from '@/index';
+import type { SystemData } from '@/types';
+import { formatJapaneseDateTime, getDaysSince } from '@/utils/date';
 function extractErrorMessage(data: unknown, fallback: string): string {
   if (data && typeof data === 'object' && 'error' in data && typeof data.error === 'string') {
     return data.error;

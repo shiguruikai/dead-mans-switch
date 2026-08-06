@@ -1,4 +1,4 @@
-import type { EmailSendBinding } from '../types';
+import type { EmailSendBinding } from '@/types';
 
 export interface SendEmailOptions {
   from: string;

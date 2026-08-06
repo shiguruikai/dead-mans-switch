@@ -5,18 +5,18 @@ import { jsxRenderer } from 'hono/jsx-renderer';
 import { Link, ViteClient } from 'vite-ssr-components/hono';
 import * as z from 'zod';
 
-import { processScheduledCheck } from './services/cron';
+import { processScheduledCheck } from '@/services/cron';
 import {
   addPushSubscription,
   getSystemData,
   removePushSubscription,
   updateActivity,
-} from './services/kv';
-import type { Env } from './types';
-import { SystemLockedError } from './types';
-import { getDaysSince } from './utils/date';
-import { CheckInPage } from './views/check-in';
-import { DeadPage } from './views/dead';
+} from '@/services/kv';
+import type { Env } from '@/types';
+import { SystemLockedError } from '@/types';
+import { getDaysSince } from '@/utils/date';
+import { CheckInPage } from '@/views/check-in';
+import { DeadPage } from '@/views/dead';
 
 const handlePing = async (c: Context<{ Bindings: Env }>) => {
   const updated = await updateActivity(c.env.DMS_KV);

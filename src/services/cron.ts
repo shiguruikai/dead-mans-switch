@@ -1,5 +1,6 @@
-import type { Env, PushSubscription, SystemData } from '../types';
-import { getSecondsSince } from '../utils/date';
+import type { Env, PushSubscription, SystemData } from '@/types';
+import { getSecondsSince } from '@/utils/date';
+
 import { sendEmail } from './email';
 import { getSystemData, saveSystemData } from './kv';
 import { sendNotificationToAll } from './push';

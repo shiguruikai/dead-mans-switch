@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import { parseEmailAddresses, sendEmail } from '../src/services/email';
+import { parseEmailAddresses, sendEmail } from '@/services/email';
 
 describe('メール処理モジュール（src/services/email.ts）', () => {
   describe('parseEmailAddresses', () => {

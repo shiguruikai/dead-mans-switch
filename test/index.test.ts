@@ -1,17 +1,17 @@
 import { testClient } from 'hono/testing';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { app } from '../src/index';
-import { processScheduledCheck } from '../src/services/cron';
+import { app } from '@/index';
+import { processScheduledCheck } from '@/services/cron';
 import {
   addPushSubscription,
   getSystemData,
   removePushSubscription,
   saveSystemData,
   updateActivity,
-} from '../src/services/kv';
-import type { Env, PushSubscription } from '../src/types';
-import { SystemLockedError } from '../src/types';
+} from '@/services/kv';
+import type { Env, PushSubscription } from '@/types';
+import { SystemLockedError } from '@/types';
 
 // KVNamespace のインメモリ用モック
 class MockKVNamespace {

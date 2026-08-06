@@ -1,6 +1,6 @@
 import webpush from 'web-push';
 
-import type { Env, PushSubscription } from '../types';
+import type { Env, PushSubscription } from '@/types';
 
 export interface PushResult {
   endpoint: string;

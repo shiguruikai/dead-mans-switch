@@ -7,7 +7,7 @@ import {
   isValidDate,
   MS_PER_DAY,
   MS_PER_SECOND,
-} from '../../src/utils/date';
+} from '@/utils/date';
 
 describe('日付・時間ユーティリティ（src/utils/date.ts）', () => {
   it('時間に関する定数が正しく定義されていること', () => {

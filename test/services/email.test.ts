@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import { sendEmail } from '../../src/services/email';
-import type { EmailSendBinding } from '../../src/types';
+import { sendEmail } from '@/services/email';
+import type { EmailSendBinding } from '@/types';
 
 describe('メール送信サービス（src/services/email.ts）', () => {
   it('Cloudflare Email Send バインディングを正しいペイロードで呼び出すこと', async () => {
