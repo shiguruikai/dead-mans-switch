@@ -8,7 +8,7 @@ import tseslint from 'typescript-eslint';
 
 export default defineConfig([
   // グローバル無視ルール
-  globalIgnores(['.wrangler/', 'docs/', '**/worker-configuration.d.ts']),
+  globalIgnores(['.wrangler/', 'dist/', 'docs/', '**/worker-configuration.d.ts']),
 
   // 基本構成
   js.configs.recommended,
@@ -66,22 +66,25 @@ export default defineConfig([
     },
     languageOptions: {
       globals: {
-        ...globals.serviceworker,
-        ...globals.node,
+        ...globals.browser,
       },
       parserOptions: {
         projectService: {
-          allowDefaultProject: ['eslint.config.ts'],
           tsconfigRootDir: import.meta.dirname,
         },
       },
     },
   },
 
-  // JSファイルの型チェックを無効化
+  // ServiceWorker 用
   {
-    files: ['**/*.js'],
+    files: ['public/sw.js'],
     extends: [tseslint.configs.disableTypeChecked],
+    languageOptions: {
+      globals: {
+        ...globals.serviceworker,
+      },
+    },
   },
 
   // テストコード用の型ルール緩和

@@ -4,8 +4,8 @@
 
 本システムは、生存シグナルの停止を自動検知し、事前設定された通知先へメールおよび Web Push を自動送信する Cloudflare Workers ベースのセルフホスト型死後通知システムです。
 
-1. **生存シグナルの受動受信**: 外部スクリプトやクライアントからの API リクエスト（`POST /api/ping`）を受信し、最終アクティブ日時を自動記録する。
-2. **認証付き確認画面**: Cloudflare Zero Trust（Access）で保護された専用画面（`/checkin`）から、ステータス確認と手動復帰が行える。
+1. **生存シグナルの受動受信**: 外部スクリプトやクライアントからの API リクエスト（`POST /api/ping`）を受信し、最終生存確認日時を自動記録する。
+2. **認証付き確認画面**: Cloudflare Zero Trust（Access）で保護された専用画面（`/`）から、ステータス確認と手動復帰が行える。
 3. **二段階通知**:
    - **生存確認リマインダー**: 不活動期間が指定日数（`WARNING_DAYS`、標準7日）に達すると、本人宛メール（`OWNER_EMAIL_ADDRESS`）および登録端末へ Web Push を送信する。
    - **死後通知**: 通算不活動期間が指定日数（`DEAD_DAYS`、標準14日）に達すると、指定の通知先（`KIN_EMAIL_ADDRESS`）へメールを送信する。
@@ -15,9 +15,9 @@
 ```mermaid
 stateDiagram-v2
     [*] --> NORMAL: 初期化
-    NORMAL --> NORMAL: /api/ping または /checkin/ping 受信（last_active_at 更新）
+    NORMAL --> NORMAL: /api/ping または /ping 受信（last_active_at 更新）
     NORMAL --> WARNING: WARNING_DAYS 経過（リマインダー送信）
-    WARNING --> NORMAL: /checkin/ping または /api/ping 受信（warning_sent_at リセット）
+    WARNING --> NORMAL: /ping または /api/ping 受信（warning_sent_at リセット）
     WARNING --> DEAD: DEAD_DAYS 経過（死後通知送信）
     DEAD --> [*]: ロックアウト（復帰不可）
 ```
@@ -34,21 +34,21 @@ stateDiagram-v2
 
 すべてのエンドポイントは Cloudflare Zero Trust（Access）で保護する。
 
-- **`GET /checkin`**（Access ユーザー認証）
-  - 生存確認ダッシュボード画面を返却する。
-  - 現在のステータス、最終アクティブ日時、不活動経過日数、Web Push 購読状況を表示する。
+- **`GET /`**（Access ユーザー認証）
+  - 生存確認画面を返却する（Hono/JSX による SSR ＋ Vite クライアントスクリプト）。
+  - 現在のステータス、最終生存確認日時（`<time>` タグとして SSR 出力し、クライアントサイドで閲覧ユーザーのブラウザタイムゾーンへ自動変換表示）、最終生存確認日からの経過日数、Web Push 購読状況を表示する。
   - `DEAD` 状態時はステータス変更ボタンを非活性化し、ロックアウト画面を表示する。
-- **`POST /checkin/ping`**（Access ユーザー認証）
+- **`POST /ping`**（Access ユーザー認証）
   - 画面からの手動生存報告用。`last_active_at` を現在時刻に更新し、`WARNING` の場合は `NORMAL` へ復帰させて `warning_sent_at` を `null` に初期化する。
   - `DEAD` 状態時は `403 Forbidden` を返却する。
 - **`POST /api/ping`**（Service Token または Access ユーザー認証）
-  - 外部スクリプト等からの自動生存報告用。動作は `POST /checkin/ping` と同一。
+  - 外部スクリプト等からの自動生存報告用。動作は `POST /ping` と同一。
 - **`POST /api/push/subscribe`**（Access ユーザー認証）
   - Web Push サブスクリプション情報を KV 内の `push_subscriptions` 配列に追加・更新する（最大20件）。
 - **`DELETE /api/push/subscribe`**（Access ユーザー認証）
   - 指定された `endpoint` の Web Push サブスクリプション情報を KV から削除する。
 - **`GET /api/status`**（Service Token または Access ユーザー認証）
-  - 現在のステータス、最終アクティブ日時、不活動日数などを JSON 形式で返却する。
+  - 現在のステータス、最終生存確認日時、経過日数などを JSON 形式で返却する。
 
 ### 3.2. 定時判定処理（Cron Trigger）
 

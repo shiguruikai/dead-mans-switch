@@ -4,15 +4,17 @@
 
 | 区分 | 採用技術 / サービス | 用途・詳細 |
 | :--- | :--- | :--- |
-| **開発言語** | TypeScript (v6.x) | 型安全な Worker 実装 |
-| **フレームワーク** | Hono (v4.x) | 軽量 Web フレームワーク |
+| **開発言語** | TypeScript (v6) | 型安全な Worker 実装 |
+| **Web フレームワーク** | Hono / Hono JSX (v4) | ルーティング、JSX SSR レンダリング、RPC（型安全 API） |
+| **ビルドツール** | Vite (v8) | Workers およびクライアントアセットの本番ビルド（`@cloudflare/vite-plugin`） |
+| **バリデーション** | Zod (v4) + `@hono/zod-validator` | リクエストデータのスキーマ検証・自動型推論 |
 | **認証・アクセス制御** | Cloudflare Zero Trust | 全パス保護（本人認証: Google/Passkey、外部API認証: Service Tokens） |
 | **実行基盤** | Cloudflare Workers | サーバーレスランタイム (Wrangler v4, `nodejs_compat`) |
-| **静的アセット配信** | Cloudflare Workers Static Assets | `public/sw.js`（Service Worker）、`public/style.css` の静的自動配信 |
-| **ストレージ** | Cloudflare KV (`DMS_KV`) | 状態・タイムスタンプ・複数端末 Web Push サブスク保存 |
+| **静的アセット配信** | Cloudflare Workers Static Assets | `public/sw.js`（Service Worker）、`public/style.css`、Vite クライアントアセット |
+| **ストレージ** | Cloudflare KV | 状態・タイムスタンプ・Web Push 配信先情報の保存 |
 | **定時実行** | Cloudflare Cron Triggers | 日次判定処理 (`0 0 * * *`) |
-| **本人通知** | Email Send + Web Push (VAPID / SW) | 生存確認リマインダー配信（メール + 全端末への Web Push 同時配信） |
-| **死後通知** | Cloudflare Email Send (Email Routing) | 死後通知先宛てへの死後通知自動送信 |
+| **本人通知** | Cloudflare Email Service + Web Push | 生存確認リマインダー配信（メール + 全端末への Web Push 同時配信） |
+| **死後通知** | Cloudflare Email Service | 死後通知自動送信（Email Sending 機能） |
 | **テスト** | Vitest + Workers Pool | 状態遷移・API 自動テスト |
 
 ## 2. ディレクトリ構成
@@ -25,23 +27,29 @@ dead-mans-switch/
 │   └── ARCHITECTURE.md       # アーキテクチャ・詳細設計書（本書）
 ├── package.json              # 依存関係定義
 ├── tsconfig.json             # TypeScript設定
+├── vite.config.ts            # Vite + Cloudflare 開発・ビルド設定
 ├── wrangler.jsonc.example    # 設定・非機密環境変数テンプレート（wrangler.jsonc は git 管理対象外）
 ├── vitest.config.ts          # Vitest 設定
 ├── public/
-│   ├── style.css             # ダッシュボード・ロックアウト画面用スタイルシート
-│   └── sw.js                 # Service Worker（Web Push 受信 & /checkin 画面起動、Workers Assets で自動配信）
+│   ├── style.css             # 生存確認・ロックアウト画面用スタイルシート
+│   └── sw.js                 # Service Worker（Web Push 受信 & / 画面起動、Workers Assets で自動配信）
 ├── src/
-│   ├── index.ts              # メインエントリポイント（Hono API + Cron）
-│   ├── types.ts              # 型定義
-│   ├── templates/
-│   │   └── checkin.ts        # ダッシュボード・ロックアウト画面 HTML テンプレート
+│   ├── index.tsx             # メインエントリポイント（Hono API + JSX レンダラー + Cron）
+│   ├── types.ts              # 型定義（SystemLockedError 等）
+│   ├── utils/
+│   │   └── date.ts           # 日付・時間計算ユーティリティ
+│   ├── views/                # Hono/JSX サーバービューコンポーネント
+│   │   ├── check-in.tsx      # 生存確認画面 JSX ビュー & クライアントロジック & DOM マウント
+│   │   └── dead.tsx          # 死後通知送信完了（システムロックアウト） JSX ビュー
 │   └── services/
 │       ├── push.ts           # Web Push (VAPID) 送信モジュール
 │       ├── email.ts          # メール送信モジュール（Cloudflare Email Send）
 │       ├── kv.ts             # KV 操作モジュール
 │       └── cron.ts           # 定時チェック・判定・無効端末クリーンアップモジュール
 └── test/
-    └── index.test.ts         # 自動テスト
+    ├── index.test.ts         # システム・API 自動テスト
+    └── utils/
+        └── date.test.ts      # 日付ユーティリティ単体テスト
 ```
 
 ## 3. KV データ設計（`DMS_KV`）
@@ -49,7 +57,7 @@ dead-mans-switch/
 | キー | 型 / 値の範囲 | 説明 |
 | :--- | :--- | :--- |
 | `status` | `"NORMAL"` \| `"WARNING"` \| `"DEAD"` | システムの現在状態 |
-| `last_active_at` | ISO 8601 文字列 | 最終アクティブ日時 |
+| `last_active_at` | ISO 8601 文字列 | 最終生存確認日時 |
 | `warning_sent_at` | ISO 8601 文字列 \| `null` | 生存確認リマインダー成功日時 |
 | `dead_sent_at` | ISO 8601 文字列 \| `null` | 死後通知送信成功日時（リトライ判定用） |
 | `push_subscriptions` | JSON 配列 (`PushSubscription[]`) | 登録済み複数端末の Web Push 購読情報リスト |
@@ -62,8 +70,8 @@ Cloudflare Dashboard > **Zero Trust** > **Access controls** 設定にてドメ�
 
 | パス / エンドポイント | 適用される Zero Trust Policy | 詳細 |
 | :--- | :--- | :--- |
-| **`GET /checkin`** | **Allow (User Email / Identity)** | 本人の Google アカウント / Passkey 認証を通したユーザーのみアクセス許可。 |
-| **`POST /checkin/ping`** | **Allow (User Email / Identity)** | ダッシュボードからの手動 Ping 用。Access ログインセッションで保護。 |
+| **`GET /`** | **Allow (User Email / Identity)** | 本人の Google アカウント / Passkey 認証を通したユーザーのみアクセス許可。 |
+| **`POST /ping`** | **Allow (User Email / Identity)** | 生存確認画面からの生存報告 Ping 用。Access ログインセッションで保護。 |
 | **`POST /api/push/subscribe`** | **Allow (User Email / Identity)** | 本人端末からのみ Web Push 登録を許可。 |
 | **`DELETE /api/push/subscribe`** | **Allow (User Email / Identity)** | 本人端末からの Web Push 登録解除を許可。 |
 | **`POST /api/ping`** | **Bypass (Service Token)** | スクリプト等からの自動 Ping 用に Service Token (`CF-Access-Client-Id` / `CF-Access-Client-Secret`) で Access を Bypass。 |
@@ -73,18 +81,18 @@ Cloudflare Dashboard > **Zero Trust** > **Access controls** 設定にてドメ�
 
 ### 4.2. API 詳細仕様
 
-#### 1. `GET /checkin`（生存確認ダッシュボード画面）
+#### 1. `GET /`（生存確認画面）
 
 - **認証**: Cloudflare Zero Trust
 - **処理**:
-  - `status === "DEAD"` の場合: 「死後処理完了済み（システムロックアウト中）」のメッセージ画面を返却し、復帰ボタン・Web Push 登録操作を完全に無効化する。
-  - `status !== "DEAD"` の場合: 現在のステータス（`status`）、最終アクティブ日時（`last_active_at`）、警告までの経過日数、Web Push 購読状況を表示する HTML 画面を返却。
-    - 「手動で生存報告を行う」ボタン押下で `POST /checkin/ping` を呼び出し `NORMAL` へ復帰・`last_active_at` を更新。
+  - `status === "DEAD"` の場合: 「死後通知送信済み（システムロックアウト中）」のメッセージ画面を返却し、復帰ボタン・Web Push 登録操作を完全に無効化する。
+  - `status !== "DEAD"` の場合: 現在のステータス（`status`）、最終生存確認日時（`last_active_at`）、警告までの経過日数、Web Push 購読状況を表示する HTML 画面を返却。
+    - 「生存報告を行う」ボタン押下で `POST /ping` を呼び出し `NORMAL` へ復帰・`last_active_at` を更新。
     - 「この端末の Web Push 通知を許可」ボタン押下で Web Push サブスクリプションを取得し `POST /api/push/subscribe` へ送信。
     - 「この端末の Web Push 通知登録を解除」ボタン押下で `DELETE /api/push/subscribe` へ送信。
 - **レスポンス**: `200 OK` (Content-Type: `text/html; charset=utf-8`)
 
-#### 2. `POST /checkin/ping`（ダッシュボードからの手動生存報告）
+#### 2. `POST /ping`（生存確認画面からの生存報告）
 
 - **認証**: Cloudflare Zero Trust
 - **処理**:
@@ -122,7 +130,18 @@ Cloudflare Dashboard > **Zero Trust** > **Access controls** 設定にてドメ�
 #### 6. `GET /api/status`（状態確認 API）
 
 - **認証**: Cloudflare Zero Trust (Service Token 認証 または Access ユーザー認証)
-- **レスポンス**: `200 OK` (`{"status": "NORMAL", "days_since_active": 0.5, ...}`)
+- **レスポンス**: `200 OK` (`{"status": "NORMAL", "days_since_active": 0, ...}`)
+
+### 4.3. エラーハンドリング・入力検証アーキテクチャ
+
+システム全体の一貫性とセキュリティを保持するため、以下の統一されたエラーハンドリング機構を適用する。
+
+1. **Zod によるリクエスト検証エラー（`400 Bad Request`）**:
+   - `@hono/zod-validator` ミドルウェアにより、`POST /api/push/subscribe` および `DELETE /api/push/subscribe` のリクエストボディ形式を厳密に検証する。
+   - スキーマ不一致時はハンドラー実行前に `400 Bad Request`（`{"success": false, "error": ...}`）を自動返却する。
+2. **システムロックアウト例外（`403 Forbidden`）**:
+   - システムステータスが `DEAD` の状態において生存報告操作（`updateActivity`）が行われた場合、KV サービス層で `SystemLockedError` カスタム例外を発生させる。
+   - Hono の `app.onError()` グローバルエラーハンドラーが本例外をキャッチし、一貫して `403 Forbidden` (`{"error": "System locked out (status is DEAD)"}`) レスポンスへ変換して返却する。
 
 ## 5. 定期実行処理（Cron Trigger）と状態遷移
 
@@ -167,7 +186,7 @@ Cloudflare Workers の `send_email` バインディング（`env.EMAIL_SEND`）�
 
 ### 環境変数（`vars`）一覧
 
-- `BASE_URL`: システムの展開先 URL（チェックインページ URL の組み立てに使用）
+- `BASE_URL`: システムの展開先 URL（生存確認画面 URL の組み立てに使用）
 - `SENDER_EMAIL_ADDRESS`: 送信元メールアドレス
 - `VAPID_SUBJECT`: Web Push VAPID 連絡先（例: `mailto:owner@example.com`）
 - `OWNER_EMAIL_ADDRESS`: 本人通知先メールアドレス（生存確認リマインダーの受取先、カンマ区切りで複数指定可能）

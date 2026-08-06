@@ -2,7 +2,7 @@
 
 Cloudflare Workers 上で稼働する、個人専用のセルフホスト型死後通知システムです。
 
-指定した期間アクセスや更新がない場合、死後通知のメールを事前に設定した送信先へ自動送信します。手動での生存報告や状況確認は Cloudflare Zero Trust（Access）で保護された `/checkin` 画面から安全に行えます。
+指定した期間アクセスや更新がない場合、死後通知のメールを事前に設定した送信先へ自動送信します。手動での生存報告や状況確認は Cloudflare Zero Trust（Access）で保護された生存確認画面（`/`）から安全に行えます。
 
 ## 📚 ドキュメント
 
@@ -11,10 +11,10 @@ Cloudflare Workers 上で稼働する、個人専用のセルフホスト型死�
 
 ## 🚀 技術スタック
 
-- TypeScript (v6) / Hono (v4) / pnpm
+- TypeScript (v6), Hono / Hono JSX (v4), Vite (v8), Zod (v4), pnpm
 - Web Push
-- Cloudflare Workers (`nodejs_compat`) / Cloudflare KV / Cron Triggers / Zero Trust / Email Service
-- Vitest (@cloudflare/vitest-pool-workers)
+- Cloudflare Workers (`nodejs_compat`), Cloudflare KV, Cron Triggers, Zero Trust, Cloudflare Email Service
+- Vitest
 
 ## 🚀 新規デプロイ手順
 
@@ -81,7 +81,7 @@ Cloudflare Workers 上で稼働する、個人専用のセルフホスト型死�
 
 | 変数名 | 説明 | デフォルト値 / 設定例 | 変更 |
 | :--- | :--- | :--- | :--- |
-| `BASE_URL` | Workers 展開先 URL（チェックイン URL の組み立てに使用） | `https://dead-mans-switch.<subdomain>.workers.dev` | **必須** |
+| `BASE_URL` | Workers 展開先 URL（生存確認画面 URL の組み立てに使用） | `https://dead-mans-switch.<subdomain>.workers.dev` | **必須** |
 | `SENDER_EMAIL_ADDRESS` | 送信元メールアドレス（事前認証済みドメインのアドレス） | `noreply@yourdomain.com` | **必須** |
 | `VAPID_SUBJECT` | Web Push 用 VAPID 連絡先（`mailto:本人メールアドレス`） | `mailto:owner@example.com` | **必須** |
 | `OWNER_EMAIL_ADDRESS` | 本人通知先メールアドレス（生存確認リマインダーの受取先、カンマ区切りで複数指定可能） | 事前に Destination Addresses で承認済みの本人アドレス（例: `owner1@example.com, owner2@example.com`） | **必須** |
@@ -143,7 +143,7 @@ curl -X POST "https://<YOUR_WORKER_DOMAIN>/api/ping" \
 
 本人端末のブラウザから通知購読を登録します。
 
-1. `https://<YOUR_WORKER_DOMAIN>/checkin` へアクセスし、Zero Trust 認証を通過します。
+1. `https://<YOUR_WORKER_DOMAIN>/` へアクセスし、Zero Trust 認証を通過します。
 2. 「この端末の Web Push 通知を許可」ボタンをクリックし、表示されたブラウザダイアログで「許可」を選択します。
 
 #### 4.5 環境変数の変更手順（運用開始後）

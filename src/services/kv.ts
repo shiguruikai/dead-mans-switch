@@ -1,6 +1,7 @@
 import type { KVNamespace } from '@cloudflare/workers-types';
 
 import type { PushSubscription, SystemData } from '../types';
+import { SystemLockedError } from '../types';
 
 const KV_KEY = 'system_data';
 
@@ -35,7 +36,7 @@ export async function saveSystemData(kv: KVNamespace, data: SystemData): Promise
 export async function updateActivity(kv: KVNamespace): Promise<SystemData> {
   const current = await getSystemData(kv);
   if (current.status === 'DEAD') {
-    throw new Error('System locked out (status is DEAD)');
+    throw new SystemLockedError();
   }
 
   const updated: SystemData = {

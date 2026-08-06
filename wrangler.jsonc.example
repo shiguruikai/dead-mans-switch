@@ -36,7 +36,7 @@
     "WARNING_DAYS": "7",
     "DEAD_DAYS": "14",
     "WARNING_EMAIL_SUBJECT": "【重要】Dead Man's Switch 生存確認リマインダー",
-    "WARNING_EMAIL_BODY": "生存シグナルが途絶えています。生存報告を行う場合は以下のURLを開いてください:\n${BASE_URL}/checkin",
+    "WARNING_EMAIL_BODY": "生存シグナルが途絶えています。生存報告を行う場合は以下のURLを開いてください:\n${BASE_URL}/",
     "DEAD_EMAIL_SUBJECT": "【重要通知】手続情報およびメッセージのご案内",
     "DEAD_EMAIL_BODY": ""
   }

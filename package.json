@@ -2,9 +2,10 @@
   "name": "dead-mans-switch",
   "type": "module",
   "scripts": {
-    "dev": "wrangler dev",
-    "deploy": "wrangler deploy --minify",
-    "test": "vitest",
+    "dev": "vite",
+    "build": "vite build",
+    "deploy": "pnpm build && wrangler deploy --minify",
+    "test": "vitest run",
     "typecheck": "tsc --noEmit",
     "pretypecheck": "pnpm cf-typegen",
     "cf-typegen": "wrangler types --strict-vars=false --env-interface CloudflareBindings",
@@ -15,10 +16,13 @@
     "node": ">=24.0.0"
   },
   "dependencies": {
+    "@hono/zod-validator": "^0.9.0",
     "hono": "^4.12.34",
-    "web-push": "^3.6.7"
+    "web-push": "^3.6.7",
+    "zod": "^4.4.3"
   },
   "devDependencies": {
+    "@cloudflare/vite-plugin": "^1.50.0",
     "@cloudflare/vitest-pool-workers": "^0.20.1",
     "@cloudflare/workers-types": "^5.20260801.1",
     "@eslint/js": "^10.0.1",
@@ -31,6 +35,8 @@
     "jiti": "^2.7.0",
     "typescript": "^6.0.3",
     "typescript-eslint": "^8.65.0",
+    "vite": "^8.2.0",
+    "vite-ssr-components": "^0.6.1",
     "vitest": "^4.1.10",
     "wrangler": "^4.118.0"
   }

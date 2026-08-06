@@ -1,4 +1,5 @@
 import type { Env, PushSubscription, SystemData } from '../types';
+import { getSecondsSince } from '../utils/date';
 import { sendEmail } from './email';
 import { getSystemData, saveSystemData } from './kv';
 import { sendNotificationToAll } from './push';
@@ -19,8 +20,7 @@ export async function processScheduledCheck(env: Env): Promise<SystemData> {
 
   const data = await getSystemData(env.DMS_KV);
   const now = new Date();
-  const lastActive = new Date(data.last_active_at);
-  const diffSeconds = (now.getTime() - lastActive.getTime()) / 1000;
+  const diffSeconds = getSecondsSince(data.last_active_at, now);
 
   // 12時間マージン (43,200秒)
   const warningThreshold = warningDays * 86400 - 43200;

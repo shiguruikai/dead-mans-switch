@@ -2,6 +2,13 @@ import type { KVNamespace } from '@cloudflare/workers-types';
 
 export type SystemStatus = 'NORMAL' | 'WARNING' | 'DEAD';
 
+export class SystemLockedError extends Error {
+  constructor(message = 'System locked out (status is DEAD)') {
+    super(message);
+    this.name = 'SystemLockedError';
+  }
+}
+
 export interface PushSubscriptionKeys {
   p256dh: string;
   auth: string;
