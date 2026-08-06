@@ -148,7 +148,7 @@ export function CheckInContent({ data: initialData, vapidPublicKey }: Readonly<C
         </div>
         <div class="info-row">
           <span class="label">最終生存確認日からの経過日数</span>
-          <span class="val">{`${diffDays.toString()} 日間`}</span>
+          <span class="val">{`${diffDays.toString()} 日`}</span>
         </div>
         <div class="info-row">
           <span class="label">Web Push 登録端末数</span>
