@@ -11,4 +11,7 @@ export default defineConfig({
     },
   },
   plugins: [cloudflare(), ssrPlugin()],
+  build: {
+    minify: true,
+  },
 });
