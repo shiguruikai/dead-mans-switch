@@ -107,9 +107,38 @@ pnpm test
 pnpm deploy
 ```
 
-### 4. デプロイ後の設定
+### 4. メール送信・通知シミュレーションテスト（CLI）
 
-#### 4.1 外部スクリプト用 Service Token の作成
+開発環境または本番環境（`--remote`）において、実際に警告リマインダーメールや死後通知メールが送信されるかを安全に通しテストできます。
+
+```bash
+# 1. 現在のステータス確認
+pnpm cli status
+pnpm cli status --remote         # 本番・リモート環境
+
+# 2. 生存シグナル（Ping）送信
+pnpm cli ping
+pnpm cli ping --remote
+
+# 3. 警告リマインダー送信テスト（last_active_at を過去に変更）
+pnpm cli warning
+pnpm cli warning --remote        # 本番・リモート環境（確認プロンプトが出ます）
+
+# 4. 死後通知送信テスト
+pnpm cli dead --remote
+
+# 5. テスト完了後の NORMAL 状態への復帰（リセット）
+pnpm cli reset --remote
+```
+
+> [!TIP]
+>
+> - CLI ツールは [wrangler.jsonc](wrangler.jsonc) 内の `vars.WARNING_DAYS` / `vars.DEAD_DAYS` を自動的に参照し、各種シミュレーションの経過日時を動的に算出します。
+> - 実際の書き込みを行わずに事前に変更内容を確認したい場合は、`--dry-run` フラグ（例: `pnpm cli warning --dry-run`）を付与してください。
+
+### 5. デプロイ後の設定
+
+#### 5.1 外部スクリプト用 Service Token の作成
 
 外部スクリプトなどから生存報告 (`POST /api/ping`) を行うための認証トークンを作成します。
 
@@ -118,7 +147,7 @@ pnpm deploy
 3. **Service Token Name**（例: `dead-mans-switch-token`）と **Service Token Duration**（例: `Non-expiring`）を入力し、`Generate token` をクリックします。
 4. 表示された **Header and client ID** と **Header and client secret** を控えておきます。※ Client Secret は画面を閉じると再表示できません。
 
-#### 4.2 Cloudflare Zero Trust の設定
+#### 5.2 Cloudflare Zero Trust の設定
 
 アプリケーション（Worker ドメイン全体）へのアクセス制御ルールを設定します。
 
@@ -129,7 +158,7 @@ pnpm deploy
    - **本人用ポリシー**: デフォルトで定義済みの `Allow My Email` など本人確認ができる任意のポリシー
    - **外部スクリプト用ポリシー**: 前述の手順で作成した Service Token で Bypass するポリシー
 
-#### 4.3 外部スクリプトからの呼び出し例
+#### 5.3 外部スクリプトからの呼び出し例
 
 自動生存報告を行うスクリプトからは、以下のヘッダーを付与してリクエストを送信します：
 
@@ -139,14 +168,14 @@ curl -X POST "https://<YOUR_WORKER_DOMAIN>/api/ping" \
   -H "CF-Access-Client-Secret: <YOUR_CLIENT_SECRET>"
 ```
 
-#### 4.4 初回 Web Push 購読設定
+#### 5.4 初回 Web Push 購読設定
 
 本人端末のブラウザから通知購読を登録します。
 
 1. `https://<YOUR_WORKER_DOMAIN>/` へアクセスし、Zero Trust 認証を通過します。
 2. 「この端末の Web Push 通知を許可」ボタンをクリックし、表示されたブラウザダイアログで「許可」を選択します。
 
-#### 4.5 環境変数の変更手順（運用開始後）
+#### 5.5 環境変数の変更手順（運用開始後）
 
 - [wrangler.jsonc](wrangler.jsonc) 内の `vars` の値を編集し、`pnpm deploy` を再実行するだけで更新できます。
 - ※ Cloudflare Dashboard > **Workers & Pages** > 本 Worker > **Settings** > **Variables and Secrets** から直接編集することも可能です。

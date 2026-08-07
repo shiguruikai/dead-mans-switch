@@ -103,4 +103,22 @@ export default defineConfig([
       '@typescript-eslint/unbound-method': 'off',
     },
   },
+
+  // scripts/ 配下の実行時依存（@/types 以外の @/* モジュール）制限ルール
+  {
+    files: ['scripts/**/*.{ts,js}'],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            {
+              group: ['@/*', '!@/types'],
+              message: 'scripts/ 配下から src/ の実行時モジュールへの依存は禁止されています。@/types の型定義のみ使用してください。',
+            },
+          ],
+        },
+      ],
+    },
+  },
 ]);

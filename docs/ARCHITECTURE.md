@@ -51,6 +51,9 @@ dead-mans-switch/
 │       ├── email.ts           # メール送信モジュール
 │       ├── kv.ts              # KV 操作モジュール
 │       └── cron.ts            # 定時チェック・判定・無効端末クリーンアップモジュール
+├── scripts/
+│   ├── cli.ts                 # メール送信・ステータスシミュレーションテスト CLI ツール
+│   └── cli.test.ts            # CLI ツール単体テスト（Node.js 環境）
 └── test/
     ├── index.test.ts          # システム・API 自動テスト
     └── utils/
@@ -193,3 +196,25 @@ Cloudflare Workers の `send_email` バインディング（`env.SEND_EMAIL`）�
 - `DEAD_EMAIL_SUBJECT` / `DEAD_EMAIL_BODY`: 死後通知メールの件名および本文テンプレート
 
 設定ファイルのテンプレート（[wrangler.jsonc.example](../wrangler.jsonc.example)）およびセットアップ手順の詳細については [README.md](../README.md) を参照。
+
+## 8. CLI ツール設計
+
+Wrangler CLI 経由で KV 状態の更新やメール送信シミュレーションを行う CLI ツール（[scripts/cli.ts](../scripts/cli.ts)）。
+
+### 8.1. コマンド一覧
+
+| コマンド | 説明 |
+| :--- | :--- |
+| `pnpm cli status` | 現在の KV 内システムデータを整形表示 |
+| `pnpm cli ping` | 生存シグナルを送信し `NORMAL` 状態へ安全復帰 |
+| `pnpm cli warning` | `WARNING`（警告リマインダー送信）シミュレーションを実行 |
+| `pnpm cli dead` | `DEAD`（死後通知送信）シミュレーションを実行 |
+| `pnpm cli reset` | ステータスを `NORMAL` 状態へ初期化リセット |
+
+### 8.2. 安全設計
+
+- **設定ファイル自動読み込み**: `wrangler.jsonc` 内の `vars`（`WARNING_DAYS` / `DEAD_DAYS`）を読み込んでシミュレーション日数を算出。
+- **誤操作防止・CI ガード**: リモート（`--remote`）実行時は変更差分を表示し実行確認。非 TTY（CI 等）環境では `--yes`（`-y`）なしの実行を自動ブロック。
+- **実行時依存ゼロの保証**: ESLint（`no-restricted-imports`）により `src/` のモジュール依存を禁止（型定義のみを参照可能）。
+- **エラーハンドリング**: 一意なエラーコード（`E1001`〜`E1006`）と POSIX 準拠の終了コード（exit code 2 等）を返却。
+- **補助機能**: `--dry-run` による事前確認、`-v` / `--version` でのバージョン表示、`-h` / `--help` でのヘルプ表示に対応。

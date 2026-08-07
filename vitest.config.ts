@@ -9,9 +9,28 @@ export default defineConfig({
       '@': path.resolve(import.meta.dirname, './src'),
     },
   },
-  plugins: [
-    cloudflareTest({
-      wrangler: { configPath: './wrangler.jsonc' },
-    }),
-  ],
+  test: {
+    projects: [
+      {
+        extends: true,
+        test: {
+          name: 'workers',
+          include: ['test/**/*.test.ts'],
+        },
+        plugins: [
+          cloudflareTest({
+            wrangler: { configPath: './wrangler.jsonc' },
+          }),
+        ],
+      },
+      {
+        extends: true,
+        test: {
+          name: 'scripts',
+          include: ['scripts/**/*.test.ts'],
+          environment: 'node',
+        },
+      },
+    ],
+  },
 });
