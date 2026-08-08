@@ -2,7 +2,7 @@
 self.addEventListener('push', (event) => {
   let title = "【Dead Man's Switch】生存確認リマインダー";
   let body = '生存シグナルが途絶えています。生存報告を行ってください。';
-  let url = '/checkin';
+  let url = '/';
 
   if (event.data) {
     try {
@@ -35,7 +35,7 @@ self.addEventListener('push', (event) => {
 
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
-  const targetUrl = (event.notification.data && event.notification.data.url) || '/checkin';
+  const targetUrl = (event.notification.data && event.notification.data.url) || '/';
   event.waitUntil(
     clients.openWindow(targetUrl),
   );

@@ -111,7 +111,7 @@ async function sendWarningNotifications(
       {
         title: '【Dead Man\'s Switch】生存確認リマインダー',
         body: '生存シグナルが途絶えています。生存報告を行ってください。',
-        url: '/checkin',
+        url: '/',
       },
     );
 
