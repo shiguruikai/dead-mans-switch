@@ -47,13 +47,17 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  min-height: 100vh;
+  min-height: 100dvh;
   margin: 0;
   padding: 1rem;
   box-sizing: border-box;
 }
 
-body.dead-page {
+[data-island] {
+  display: contents;
+}
+
+body:has(.card-dead) {
   background-color: var(--bg-dead);
   color: #e0e0e0;
 }
