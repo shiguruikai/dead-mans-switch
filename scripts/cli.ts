@@ -1,8 +1,9 @@
 #!/usr/bin/env node
 
 import { execSync } from 'node:child_process';
-import { readFileSync } from 'node:fs';
-import { basename, resolve } from 'node:path';
+import { existsSync, readFileSync, unlinkSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { basename, join, resolve } from 'node:path';
 import { createInterface } from 'node:readline';
 import { parseArgs } from 'node:util';
 
@@ -312,10 +313,10 @@ export function getSystemDataFromKV(isRemote: boolean): SystemData {
 
 export function saveSystemDataToKV(data: SystemData, isRemote: boolean): void {
   const envFlag = isRemote ? '--remote' : '--local';
-  const jsonString = JSON.stringify(data);
-  const args = ['kv', 'key', 'put', 'system_data', jsonString, envFlag, '--binding=DMS_KV'];
-
+  const tempFilePath = join(tmpdir(), `dms_kv_${String(Date.now())}_${Math.random().toString(36).slice(2)}.json`);
   try {
+    writeFileSync(tempFilePath, JSON.stringify(data, null, 2), 'utf-8');
+    const args = ['kv', 'key', 'put', 'system_data', '--path', tempFilePath, envFlag, '--binding=DMS_KV'];
     runWrangler(args);
     console.error('[SUCCESS] Successfully updated KV data.');
   } catch (err) {
@@ -323,6 +324,14 @@ export function saveSystemDataToKV(data: SystemData, isRemote: boolean): void {
     console.error('Troubleshooting: Check Wrangler authentication and binding settings.');
     console.error('Details:', err instanceof Error ? err.message : err);
     process.exit(1);
+  } finally {
+    try {
+      if (existsSync(tempFilePath)) {
+        unlinkSync(tempFilePath);
+      }
+    } catch {
+      // Ignore temporary file deletion error
+    }
   }
 }
 
