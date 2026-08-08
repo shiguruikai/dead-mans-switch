@@ -3,7 +3,7 @@ import { resolve } from 'node:path';
 import { describe, expect, it, vi } from 'vitest';
 
 import type { SystemData } from '../src/types';
-import { subDaysIso } from '../src/utils/date';
+import { subDays } from '../src/utils/date';
 import {
   CLI_VERSION,
   computeNextSystemData,
@@ -128,7 +128,7 @@ describe('Dead Man\'s Switch CLI ユニットテスト (scripts/cli.ts)', () => 
       const now = new Date('2026-08-07T12:00:00.000Z');
       const { updatedData } = computeNextSystemData('warning', baseData, now, mockConfig);
 
-      expect(updatedData.last_active_at).toBe(subDaysIso(8, now));
+      expect(updatedData.last_active_at).toBe(subDays(now, 8).toISOString());
       expect(updatedData.status).toBe('NORMAL');
     });
 
@@ -137,8 +137,8 @@ describe('Dead Man\'s Switch CLI ユニットテスト (scripts/cli.ts)', () => 
       const { updatedData } = computeNextSystemData('dead', baseData, now, mockConfig);
 
       expect(updatedData.status).toBe('WARNING');
-      expect(updatedData.last_active_at).toBe(subDaysIso(15, now));
-      expect(updatedData.warning_sent_at).toBe(subDaysIso(7, now));
+      expect(updatedData.last_active_at).toBe(subDays(now, 15).toISOString());
+      expect(updatedData.warning_sent_at).toBe(subDays(now, 7).toISOString());
     });
 
     it('reset コマンド実行時にステータスが NORMAL にリセットされること', () => {

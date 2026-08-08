@@ -3,7 +3,7 @@ import { useEffect, useState } from 'hono/jsx';
 
 import type { AppType } from '@/index';
 import type { SystemData } from '@/types';
-import { formatJapaneseDateTime, getDaysSince } from '@/utils/date';
+import { differenceInDays, isValidDate } from '@/utils/date';
 
 function extractErrorMessage(data: unknown, fallback: string): string {
   if (data && typeof data === 'object' && 'error' in data && typeof data.error === 'string') {
@@ -24,8 +24,9 @@ export function CheckInContent({ data: initialData, vapidPublicKey }: Readonly<C
   const [msg, setMsg] = useState<{ text: string; isError: boolean } | null>(null);
   const [isSubscribed, setIsSubscribed] = useState<boolean | null>(null);
 
-  const formattedDate = formatJapaneseDateTime(systemData.last_active_at);
-  const diffDays = getDaysSince(systemData.last_active_at);
+  const lastActiveDate = new Date(systemData.last_active_at);
+  const formattedDate = isValidDate(lastActiveDate) ? lastActiveDate.toLocaleString('ja-JP') : '-';
+  const diffDays = differenceInDays(new Date(), lastActiveDate);
 
   useEffect(() => {
     if (typeof window !== 'undefined' && 'serviceWorker' in navigator && 'PushManager' in window) {

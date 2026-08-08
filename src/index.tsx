@@ -16,7 +16,7 @@ import {
 } from '@/services/kv';
 import type { Env } from '@/types';
 import { SystemLockedError } from '@/types';
-import { getDaysSince } from '@/utils/date';
+import { differenceInDays } from '@/utils/date';
 
 const handlePing = async (c: Context<{ Bindings: Env }>) => {
   const updated = await updateActivity(c.env.DMS_KV);
@@ -114,7 +114,7 @@ const app = new Hono<{ Bindings: Env }>()
       return c.json({
         status: data.status,
         last_active_at: data.last_active_at,
-        days_since_active: getDaysSince(data.last_active_at),
+        days_since_active: differenceInDays(new Date(), new Date(data.last_active_at)),
         warning_sent_at: data.warning_sent_at,
         dead_sent_at: data.dead_sent_at,
         push_subscriptions_count: data.push_subscriptions.length,

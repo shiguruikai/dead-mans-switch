@@ -1,14 +1,12 @@
 import { describe, expect, it } from 'vitest';
 
 import {
-  formatJapaneseDateTime,
-  getDaysSince,
-  getSecondsSince,
+  differenceInDays,
+  differenceInSeconds,
   isValidDate,
   MS_PER_DAY,
   MS_PER_SECOND,
   subDays,
-  subDaysIso,
 } from '@/utils/date';
 
 describe('日付・時間ユーティリティ（src/utils/date.ts）', () => {
@@ -36,48 +34,29 @@ describe('日付・時間ユーティリティ（src/utils/date.ts）', () => {
     });
   });
 
-  describe('subDaysIso', () => {
-    it('指定した日数前の ISO 日付文字列を正しく計算できること', () => {
-      const base = new Date('2026-08-10T12:00:00.000Z');
-      const result = subDaysIso(3, base);
-      expect(result).toBe('2026-08-07T12:00:00.000Z');
-    });
-  });
-
-  describe('getDaysSince', () => {
-    it('経過日数を正しく計算できること', () => {
+  describe('differenceInDays', () => {
+    it('差分日数を正しく計算できること', () => {
       const now = new Date('2026-08-10T12:00:00.000Z');
-      const past = '2026-08-07T12:00:00.000Z';
-      expect(getDaysSince(past, now)).toBe(3);
+      const past = new Date('2026-08-07T12:00:00.000Z');
+      expect(differenceInDays(now, past)).toBe(3);
     });
 
-    it('不正な日付文字列の場合は 0 を返すこと', () => {
-      expect(getDaysSince('invalid-date')).toBe(0);
+    it('不正な Date オブジェクトが含まれる場合は 0 を返すこと', () => {
+      expect(differenceInDays(new Date('invalid-date'), new Date())).toBe(0);
+      expect(differenceInDays(new Date(), new Date('invalid-date'))).toBe(0);
     });
   });
 
-  describe('getSecondsSince', () => {
-    it('経過秒数を正しく計算できること', () => {
+  describe('differenceInSeconds', () => {
+    it('差分秒数を正しく計算できること', () => {
       const now = new Date('2026-08-07T12:01:40.000Z');
-      const past = '2026-08-07T12:00:00.000Z';
-      expect(getSecondsSince(past, now)).toBe(100);
+      const past = new Date('2026-08-07T12:00:00.000Z');
+      expect(differenceInSeconds(now, past)).toBe(100);
     });
 
-    it('不正な日付文字列の場合は 0 を返すこと', () => {
-      expect(getSecondsSince('invalid-date')).toBe(0);
-    });
-  });
-
-  describe('formatJapaneseDateTime', () => {
-    it('有効な ISO 文字列を日本時間の文字列へフォーマットできること', () => {
-      const formatted = formatJapaneseDateTime('2026-08-07T00:00:00.000Z');
-      expect(formatted).toBeDefined();
-      expect(typeof formatted).toBe('string');
-      expect(formatted).toContain('2026');
-    });
-
-    it('不正な日付文字列の場合は元の文字列を返すこと', () => {
-      expect(formatJapaneseDateTime('invalid-date')).toBe('invalid-date');
+    it('不正な Date オブジェクトが含まれる場合は 0 を返すこと', () => {
+      expect(differenceInSeconds(new Date('invalid-date'), new Date())).toBe(0);
+      expect(differenceInSeconds(new Date(), new Date('invalid-date'))).toBe(0);
     });
   });
 });

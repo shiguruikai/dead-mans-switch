@@ -10,7 +10,7 @@ import JSON5 from 'json5';
 import * as z from 'zod';
 
 import type { SystemData } from '@/types';
-import { subDaysIso } from '@/utils/date';
+import { subDays } from '@/utils/date';
 
 import pkg from '../package.json' with { type: 'json' };
 
@@ -205,13 +205,13 @@ export function computeNextSystemData(
     updatedData.warning_sent_at = null;
   } else if (command === 'warning') {
     updatedData.status = 'NORMAL';
-    updatedData.last_active_at = subDaysIso(config.warningDays + 1, now);
+    updatedData.last_active_at = subDays(now, config.warningDays + 1).toISOString();
     updatedData.warning_sent_at = null;
     updatedData.dead_sent_at = null;
   } else if (command === 'dead') {
     updatedData.status = 'WARNING';
-    updatedData.last_active_at = subDaysIso(config.deadDays + 1, now);
-    updatedData.warning_sent_at = subDaysIso(config.warningDays, now);
+    updatedData.last_active_at = subDays(now, config.deadDays + 1).toISOString();
+    updatedData.warning_sent_at = subDays(now, config.warningDays).toISOString();
     updatedData.dead_sent_at = null;
   } else {
     updatedData.status = 'NORMAL';
