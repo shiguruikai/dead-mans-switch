@@ -6,6 +6,10 @@ import { isIslandName, islands } from './lib/island';
 function mountIslands() {
   const nodes = document.querySelectorAll<HTMLElement>('[data-island]');
   nodes.forEach((el) => {
+    if (el.dataset.islandMounted === 'true') {
+      return;
+    }
+
     const name = el.dataset.island;
 
     if (!isIslandName(name)) {
@@ -27,7 +31,13 @@ function mountIslands() {
 
     const Component = islands[name] as FC;
 
-    render(<Component {...props} />, el);
+    try {
+      render(<Component {...props} />, el);
+      el.dataset.islandMounted = 'true';
+      delete el.dataset.props;
+    } catch (e) {
+      console.error(`[client] Failed to mount island ${name}:`, e);
+    }
   });
 }
 

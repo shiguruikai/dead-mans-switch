@@ -158,12 +158,13 @@ export function CheckInContent({ data: initialData, vapidPublicKey }: Readonly<C
       </div>
 
       <button id="pingBtn" type="button" class="btn btn-primary" onClick={() => { void handlePing(); }}>生存報告を行う</button>
-      {isSubscribed !== true && (
-        <button id="pushBtn" type="button" class="btn btn-secondary" onClick={() => { void handlePushSubscribe(); }}>この端末の Web Push 通知を許可</button>
-      )}
-      {isSubscribed !== false && (
-        <button id="unsubBtn" type="button" class="btn btn-danger" onClick={() => { void handlePushUnsubscribe(); }}>この端末の Web Push 通知登録を解除</button>
-      )}
+      {isSubscribed === true
+        ? (
+            <button id="unsubBtn" type="button" class="btn btn-danger" onClick={() => { void handlePushUnsubscribe(); }}>この端末の Web Push 通知登録を解除</button>
+          )
+        : (
+            <button id="pushBtn" type="button" class="btn btn-secondary" onClick={() => { void handlePushSubscribe(); }}>この端末の Web Push 通知を許可</button>
+          )}
 
       {msg && (
         <div id="msgBox" class={`msg ${msg.isError ? 'msg-error' : 'msg-success'}`} style={{ display: 'block' }}>

@@ -219,3 +219,30 @@ Wrangler CLI 経由で KV 状態の更新やメール送信シミュレーショ
 - **依存モジュール制限**: ESLint（`no-restricted-imports`）により `scripts/` からの `src/` 依存を `@/types` および `@/utils` に限定。
 - **エラーハンドリング**: エラー表示を `[ERROR]` に統一し、POSIX 準拠の終了コード（exit code 2 等）を返却。
 - **補助機能**: `--dry-run` による事前確認、`-v` / `--version` でのバージョン表示、`-h` / `--help` でのヘルプ表示に対応。
+
+## 9. Island アーキテクチャ設計
+
+Cloudflare Workers での高速な初期描画（SSR）とブラウザでの動的操作（CSR）を両立するため、**Island アーキテクチャ（部分ハイドレーション）**を採用する。
+
+### 9.1. 動作原理
+
+1. **サーバーサイドレンダリング（SSR）**:
+   - `src/pages/` 内で `<Island name="..." props={...}>` を配置。
+   - `src/lib/island.tsx` の `<Island>` ラッパーがレジストリ（`islands`）から対象コンポーネントを取得して自動描画し、`data-island`（コンポーネント識別子）および `data-props`（JSON 化済み Props）を持つ `<div>` コンテナを出力。
+2. **クライアントサイドハイドレーション（CSR）**:
+   - `src/client.tsx` が `[data-island]` ノードを検索。
+   - `data-island-mounted="true"` により二重マウントを防止し、`data-props` から JSON を復元。
+   - レジストリ（`islands`）から該当コンポーネントを取得し `render` マウントを実行。マウント完了後に不要となった `data-props` を DOM から削除（クリーンアップ）。個別 `try-catch` によりエラーを隔離。
+
+### 9.2. 新規 Island コンポーネントの追加手順
+
+1. **コンポーネント作成**: `src/islands/` 配下に JSX コンポーネントを定義。
+2. **レジストリ登録**: `src/lib/island.tsx` の `islands` オブジェクトへ登録。
+3. **ページ側での呼び出し**: SSR ページ（`src/pages/`）にて `<Island name="..." props={...}>` を呼び出す。
+
+### 9.3. 設計上の制約事項
+
+軽量性と保守性を優先したシンプル実装のため、以下の制約事項が存在する：
+
+- **Island のネスト不可**: 親 Island の内部に子 Island を配置する構造は未サポート（親のクライアント描画時に内部 DOM が初期化され、子 Island のマウントが破壊されるため、Island は常にフラットに配置すること）。
+- **後発動的 DOM の手動マウント**: 初期表示（`DOMContentLoaded` / 即時実行）以降に、クライアントサイドで動的に `[data-island]` ノードを DOM 追記した場合は自動検知されない（後から追加したノードを有効化するには `mountIslands()` の手動呼び出しが必要）。
