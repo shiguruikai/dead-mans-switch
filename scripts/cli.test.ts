@@ -1,36 +1,35 @@
 import { resolve } from 'node:path';
 
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import type { SystemData } from '../src/types';
+import { subDaysIso } from '../src/utils/date';
 import {
   CLI_VERSION,
   computeNextSystemData,
   extractJsonFromText,
   isMain,
   loadSystemConfig,
-  MS_PER_DAY,
   parseCliArgs,
+  printUsage,
 } from './cli';
 
 describe('Dead Man\'s Switch CLI ユニットテスト (scripts/cli.ts)', () => {
   describe('loadSystemConfig (設定ファイルの動的読み込み)', () => {
     it('wrangler.jsonc から WARNING_DAYS と DEAD_DAYS を正しく読み込めること', () => {
       const config = loadSystemConfig();
-      expect(config.warningDays).toBe(7);
-      expect(config.deadDays).toBe(14);
+      expect(config.warningDays).toBe(1);
+      expect(config.deadDays).toBe(2);
     });
 
-    it('存在しないディレクトリの場合デフォルト値（7日, 14日）を返すこと', () => {
-      const config = loadSystemConfig('/non/existent/path');
-      expect(config.warningDays).toBe(7);
-      expect(config.deadDays).toBe(14);
+    it('存在しないディレクトリの場合詳細なエラーメッセージとともに例外をスローすること', () => {
+      expect(() => loadSystemConfig('/non/existent/path')).toThrow('Failed to read wrangler.jsonc:');
     });
   });
 
   describe('extractJsonFromText (JSON レスポンスの抽出フィルター)', () => {
     it('Wrangler のログが混在していても JSON 文字列部分のみを正しく抽出できること', () => {
-      const rawWithLog = '[33m[WRANGLER] update available[0m\n{"status":"NORMAL","last_active_at":"2026-01-01T00:00:00.000Z"}\n';
+      const rawWithLog = ' \x1b[33m[WRANGLER] update available \x1b[0m\n{"status":"NORMAL","last_active_at":"2026-01-01T00:00:00.000Z"}\n';
       const extracted = extractJsonFromText(rawWithLog);
       expect(extracted).toBe('{"status":"NORMAL","last_active_at":"2026-01-01T00:00:00.000Z"}');
     });
@@ -58,31 +57,28 @@ describe('Dead Man\'s Switch CLI ユニットテスト (scripts/cli.ts)', () => 
       expect(result2).toEqual({ action: 'help', exitCode: 0 });
     });
 
-    it('コマンド未指定時にエラーコード E1002 と exitCode 2 を返すこと（§6.1, §6.4）', () => {
+    it('コマンド未指定時にエラーレスポンスと exitCode 2 を返すこと（§6.1, §6.4）', () => {
       const result = parseCliArgs([]);
       expect(result).toEqual({
         action: 'error',
-        errorCode: 'E1002',
-        message: 'Error: No command specified.',
+        message: 'No command specified.',
         exitCode: 2,
       });
     });
 
-    it('無効なコマンド指定時にエラーコード E1002 と exitCode 2 を返すこと（§6.1, §6.4）', () => {
+    it('無効なコマンド指定時にエラーレスポンスと exitCode 2 を返すこと（§6.1, §6.4）', () => {
       const result = parseCliArgs(['invalid-cmd']);
       expect(result).toEqual({
         action: 'error',
-        errorCode: 'E1002',
-        message: 'Error: Invalid command "invalid-cmd".',
+        message: 'Invalid command "invalid-cmd".',
         exitCode: 2,
       });
     });
 
-    it('未定義のフラグ（タイポ等）が指定された場合に E1002 エラーを返すこと（strict モード）', () => {
+    it('未定義のフラグ（タイポ等）が指定された場合にエラーを返すこと（strict モード）', () => {
       const result = parseCliArgs(['ping', '--invalid-option']);
       expect(result.action).toBe('error');
       if (result.action === 'error') {
-        expect(result.errorCode).toBe('E1002');
         expect(result.exitCode).toBe(2);
       }
     });
@@ -120,20 +116,19 @@ describe('Dead Man\'s Switch CLI ユニットテスト (scripts/cli.ts)', () => 
       expect(updatedData.warning_sent_at).toBeNull();
     });
 
-    it('システムが DEAD の場合、ping 実行時に E1005 エラーを返すこと', () => {
+    it('システムが DEAD の場合、ping 実行時にエラーを返すこと', () => {
       const deadData: SystemData = { ...baseData, status: 'DEAD' };
       const { error } = computeNextSystemData('ping', deadData, new Date(), mockConfig);
 
       expect(error).toBeDefined();
-      expect(error?.errorCode).toBe('E1005');
+      expect(error?.message).toContain('DEAD');
     });
 
     it('warning コマンド実行時に last_active_at が (warningDays + 1) 日前に設定されること', () => {
       const now = new Date('2026-08-07T12:00:00.000Z');
       const { updatedData } = computeNextSystemData('warning', baseData, now, mockConfig);
 
-      const expectedTime = new Date(now.getTime() - (8 * MS_PER_DAY)).toISOString();
-      expect(updatedData.last_active_at).toBe(expectedTime);
+      expect(updatedData.last_active_at).toBe(subDaysIso(8, now));
       expect(updatedData.status).toBe('NORMAL');
     });
 
@@ -141,11 +136,9 @@ describe('Dead Man\'s Switch CLI ユニットテスト (scripts/cli.ts)', () => 
       const now = new Date('2026-08-07T12:00:00.000Z');
       const { updatedData } = computeNextSystemData('dead', baseData, now, mockConfig);
 
-      const expectedActive = new Date(now.getTime() - (15 * MS_PER_DAY)).toISOString();
-      const expectedWarning = new Date(now.getTime() - (7 * MS_PER_DAY)).toISOString();
       expect(updatedData.status).toBe('WARNING');
-      expect(updatedData.last_active_at).toBe(expectedActive);
-      expect(updatedData.warning_sent_at).toBe(expectedWarning);
+      expect(updatedData.last_active_at).toBe(subDaysIso(15, now));
+      expect(updatedData.warning_sent_at).toBe(subDaysIso(7, now));
     });
 
     it('reset コマンド実行時にステータスが NORMAL にリセットされること', () => {
@@ -180,6 +173,15 @@ describe('Dead Man\'s Switch CLI ユニットテスト (scripts/cli.ts)', () => 
   describe('パッケージ定数とバージョン', () => {
     it('CLI_VERSION が正しく読み込まれていること', () => {
       expect(CLI_VERSION).toBe('1.0.0');
+    });
+  });
+
+  describe('printUsage (STDERR 出力チェック)', () => {
+    it('printUsage の案内メッセージが console.error（STDERR）に出力されること', () => {
+      const spyError = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+      printUsage();
+      expect(spyError).toHaveBeenCalledWith(expect.stringContaining("Dead Man's Switch CLI"));
+      spyError.mockRestore();
     });
   });
 });

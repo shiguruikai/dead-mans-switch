@@ -134,6 +134,7 @@ pnpm cli reset --remote
 > [!TIP]
 >
 > - CLI ツールは [wrangler.jsonc](wrangler.jsonc) 内の `vars.WARNING_DAYS` / `vars.DEAD_DAYS` を自動的に参照し、各種シミュレーションの経過日時を動的に算出します。
+> - 本番・リモート環境（`--remote`）への操作を行うには、事前に Cloudflare へのログイン（`pnpm wrangler login`）または環境変数 `CLOUDFLARE_API_TOKEN` の設定が必要です。
 > - 実際の書き込みを行わずに事前に変更内容を確認したい場合は、`--dry-run` フラグ（例: `pnpm cli warning --dry-run`）を付与してください。
 
 ### 5. デプロイ後の設定

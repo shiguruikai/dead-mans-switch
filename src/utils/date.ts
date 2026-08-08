@@ -10,6 +10,22 @@ export function isValidDate(dateInput: Date | string): boolean {
 }
 
 /**
+ * 指定された日時から指定された日数前の Date オブジェクトを取得します。
+ */
+export function subDays(date: Date, days: number): Date {
+  const result = new Date(date);
+  result.setUTCDate(result.getUTCDate() - days);
+  return result;
+}
+
+/**
+ * 指定された日時から指定された日数前の ISO 日付文字列を取得します。
+ */
+export function subDaysIso(days: number, relativeTo: Date = new Date()): string {
+  return subDays(relativeTo, days).toISOString();
+}
+
+/**
  * 指定された ISO 日付文字列から指定日時（デフォルトは現在）までの経過日数を計算します。
  */
 export function getDaysSince(isoDateString: string, now: Date = new Date()): number {

@@ -1,21 +1,20 @@
 #!/usr/bin/env node
 
-import { execFileSync } from 'node:child_process';
+import { execSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
-import { createRequire } from 'node:module';
 import { basename, resolve } from 'node:path';
 import { createInterface } from 'node:readline';
 import { parseArgs } from 'node:util';
 
+import JSON5 from 'json5';
 import * as z from 'zod';
 
 import type { SystemData } from '@/types';
+import { subDaysIso } from '@/utils/date';
 
-const require = createRequire(import.meta.url);
-const pkg = require('../package.json') as { version: string };
+import pkg from '../package.json' with { type: 'json' };
+
 export const CLI_VERSION = pkg.version;
-
-export const MS_PER_DAY = 24 * 60 * 60 * 1000;
 
 export interface SystemConfig {
   warningDays: number;
@@ -23,22 +22,41 @@ export interface SystemConfig {
 }
 
 export function loadSystemConfig(cwd: string = process.cwd()): SystemConfig {
+  const configPath = resolve(cwd, 'wrangler.jsonc');
+
+  let rawContent: string;
   try {
-    const configPath = resolve(cwd, 'wrangler.jsonc');
-    const rawContent = readFileSync(configPath, 'utf-8');
-    const cleanedJson = rawContent.replace(/\/\*[\s\S]*?\*\/|\/\/.*/g, '');
-    const parsed = JSON.parse(cleanedJson) as { vars?: { WARNING_DAYS?: string; DEAD_DAYS?: string } };
-
-    const warningDays = Number.parseInt(parsed.vars?.WARNING_DAYS ?? '7', 10);
-    const deadDays = Number.parseInt(parsed.vars?.DEAD_DAYS ?? '14', 10);
-
-    return {
-      warningDays: Number.isNaN(warningDays) ? 7 : warningDays,
-      deadDays: Number.isNaN(deadDays) ? 14 : deadDays,
-    };
-  } catch {
-    return { warningDays: 7, deadDays: 14 };
+    rawContent = readFileSync(configPath, 'utf-8');
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    throw new Error(`Failed to read wrangler.jsonc: ${message}`, { cause: err });
   }
+
+  let parsed: { vars?: { WARNING_DAYS?: string; DEAD_DAYS?: string } };
+  try {
+    parsed = JSON5.parse(rawContent);
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    throw new Error(`Failed to parse wrangler.jsonc: ${message}`, { cause: err });
+  }
+
+  const warningDays = Number(parsed.vars?.WARNING_DAYS);
+  const deadDays = Number(parsed.vars?.DEAD_DAYS);
+
+  if (!Number.isInteger(warningDays) || !Number.isInteger(deadDays)) {
+    throw new TypeError('WARNING_DAYS and DEAD_DAYS in wrangler.jsonc must be valid integers');
+  }
+  if (warningDays <= 0 || deadDays <= 0) {
+    throw new RangeError('WARNING_DAYS and DEAD_DAYS in wrangler.jsonc must be greater than 0');
+  }
+  if (warningDays >= deadDays) {
+    throw new RangeError('WARNING_DAYS must be strictly less than DEAD_DAYS in wrangler.jsonc');
+  }
+
+  return {
+    warningDays,
+    deadDays,
+  };
 }
 
 export const pushSubscriptionSchema = z.object({
@@ -59,7 +77,7 @@ export const systemDataSchema = z.object({
 });
 
 export function printUsage(): void {
-  console.log(`
+  console.error(`
 Dead Man's Switch CLI v${CLI_VERSION}
 
 Usage:
@@ -74,25 +92,22 @@ Commands:
 
 Options:
   --help, -h     Show help
+  --version, -v  Show CLI version
   --remote, -r   Target production environment (Cloudflare Workers)
   --dry-run      Show planned changes without writing or triggering
   --yes, -y      Skip confirmation prompts automatically
-  --version, -v  Show CLI version
 
 Examples:
   pnpm cli status
   pnpm cli ping --remote
-  pnpm cli warning --dry-run
-  pnpm cli warning --remote
-  pnpm cli dead --remote
-  pnpm cli reset --remote
+  pnpm cli dead -r --dry-run
 `);
 }
 
 export type ParseCliArgsResult
   = | { action: 'version'; exitCode: 0 }
     | { action: 'help'; exitCode: 0 }
-    | { action: 'error'; errorCode: string; message: string; exitCode: 2 }
+    | { action: 'error'; message: string; exitCode: 2 }
     | {
       action: 'run';
       command: 'status' | 'ping' | 'warning' | 'dead' | 'reset';
@@ -106,11 +121,11 @@ export function parseCliArgs(rawArgs: string[]): ParseCliArgsResult {
     const { values, positionals } = parseArgs({
       args: rawArgs,
       options: {
+        'help': { type: 'boolean', short: 'h', default: false },
+        'version': { type: 'boolean', short: 'v', default: false },
         'remote': { type: 'boolean', short: 'r', default: false },
         'dry-run': { type: 'boolean', default: false },
         'yes': { type: 'boolean', short: 'y', default: false },
-        'version': { type: 'boolean', short: 'v', default: false },
-        'help': { type: 'boolean', short: 'h', default: false },
       },
       allowPositionals: true,
       strict: true,
@@ -127,18 +142,25 @@ export function parseCliArgs(rawArgs: string[]): ParseCliArgsResult {
     if (positionals.length === 0) {
       return {
         action: 'error',
-        errorCode: 'E1002',
-        message: 'Error: No command specified.',
+        message: 'No command specified.',
+        exitCode: 2,
+      };
+    }
+
+    if (positionals.length > 1) {
+      return {
+        action: 'error',
+        message: 'Multiple commands were specified.',
         exitCode: 2,
       };
     }
 
     const command = positionals[0];
+
     if (!['status', 'ping', 'warning', 'dead', 'reset'].includes(command)) {
       return {
         action: 'error',
-        errorCode: 'E1002',
-        message: `Error: Invalid command "${command}".`,
+        message: `Invalid command "${command}".`,
         exitCode: 2,
       };
     }
@@ -150,12 +172,11 @@ export function parseCliArgs(rawArgs: string[]): ParseCliArgsResult {
       isDryRun: values['dry-run'],
       autoConfirm: values.yes,
     };
-  } catch (err: unknown) {
+  } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
     return {
       action: 'error',
-      errorCode: 'E1002',
-      message: `Error: ${message}`,
+      message: message,
       exitCode: 2,
     };
   }
@@ -166,38 +187,31 @@ export function computeNextSystemData(
   currentData: SystemData,
   now: Date = new Date(),
   config: SystemConfig = loadSystemConfig(),
-): { updatedData: SystemData; error?: { errorCode: string; message: string } } {
+): { updatedData: SystemData; error?: { message: string } } {
   if (command === 'ping' && currentData.status === 'DEAD') {
     return {
       updatedData: currentData,
       error: {
-        errorCode: 'E1005',
-        message: 'Error: Cannot send ping signal because system status is DEAD (locked out).',
+        message: 'Cannot send ping signal because system status is DEAD (locked out).',
       },
     };
   }
 
-  const updatedData: SystemData = { ...currentData };
+  const updatedData = { ...currentData };
 
   if (command === 'ping') {
     updatedData.status = 'NORMAL';
     updatedData.last_active_at = now.toISOString();
     updatedData.warning_sent_at = null;
   } else if (command === 'warning') {
-    const warningMs = (config.warningDays + 1) * MS_PER_DAY;
-    const warningTimeAgo = new Date(now.getTime() - warningMs).toISOString();
     updatedData.status = 'NORMAL';
-    updatedData.last_active_at = warningTimeAgo;
+    updatedData.last_active_at = subDaysIso(config.warningDays + 1, now);
     updatedData.warning_sent_at = null;
     updatedData.dead_sent_at = null;
   } else if (command === 'dead') {
-    const deadMs = (config.deadDays + 1) * MS_PER_DAY;
-    const warningSentMs = config.warningDays * MS_PER_DAY;
-    const deadTimeAgo = new Date(now.getTime() - deadMs).toISOString();
-    const warningTimeAgo = new Date(now.getTime() - warningSentMs).toISOString();
     updatedData.status = 'WARNING';
-    updatedData.last_active_at = deadTimeAgo;
-    updatedData.warning_sent_at = warningTimeAgo;
+    updatedData.last_active_at = subDaysIso(config.deadDays + 1, now);
+    updatedData.warning_sent_at = subDaysIso(config.warningDays, now);
     updatedData.dead_sent_at = null;
   } else {
     updatedData.status = 'NORMAL';
@@ -218,7 +232,7 @@ export async function confirmAction(question: string): Promise<boolean> {
   return new Promise((resolve) => {
     const handleSigint = () => {
       rl.close();
-      console.error('\n[E1300] Operation cancelled.');
+      console.error('\n[ERROR] Operation cancelled.');
       process.exit(130);
     };
 
@@ -240,17 +254,14 @@ export async function confirmAction(question: string): Promise<boolean> {
 
 export function runWrangler(args: string[]): string {
   try {
-    const isWin = process.platform === 'win32';
-    const command = isWin ? 'cmd.exe' : 'pnpm';
-    const commandArgs = isWin ? ['/c', 'pnpm', 'wrangler', ...args] : ['wrangler', ...args];
-    return execFileSync(command, commandArgs, { encoding: 'utf-8', stdio: 'pipe' }).trim();
-  } catch (err: unknown) {
+    return execSync(`pnpm wrangler ${args.join(' ')}`, { encoding: 'utf-8', stdio: 'pipe' }).trim();
+  } catch (err) {
     if (err && typeof err === 'object' && 'stderr' in err && typeof err.stderr === 'string') {
       const stderr = err.stderr.trim();
-      throw new Error(`[E1006] Failed to execute Wrangler: ${stderr}`, { cause: err });
+      throw new Error(`Failed to execute Wrangler: ${stderr}`, { cause: err });
     }
     const message = err instanceof Error ? err.message : String(err);
-    throw new Error(`[E1006] Failed to execute Wrangler: ${message}`, { cause: err });
+    throw new Error(`Failed to execute Wrangler: ${message}`, { cause: err });
   }
 }
 
@@ -281,16 +292,18 @@ export function getSystemDataFromKV(isRemote: boolean): SystemData {
       };
     }
 
-    const cleanedOutput = extractJsonFromText(rawOutput);
-    const parsedJson: unknown = JSON.parse(cleanedOutput);
-    return systemDataSchema.parse(parsedJson);
+    return systemDataSchema.parse(JSON.parse(extractJsonFromText(rawOutput)));
   } catch (err) {
     if (err instanceof z.ZodError) {
-      console.error('[E1003] Invalid data format retrieved from KV.');
+      console.error('[ERROR] Invalid data format retrieved from KV.');
       console.error('Details:', err.issues);
     } else {
-      console.error('[E1003] Failed to retrieve KV data.');
-      console.error('Troubleshooting: Make sure local dev server (pnpm dev) is running if in local environment.');
+      console.error('[ERROR] Failed to retrieve KV data.');
+      if (isRemote) {
+        console.error('Troubleshooting: Make sure you are logged in to Cloudflare (`pnpm wrangler login`) or set CLOUDFLARE_API_TOKEN.');
+      } else {
+        console.error('Troubleshooting: Make sure local dev server (pnpm dev) is running if in local environment.');
+      }
       console.error('Details:', err instanceof Error ? err.message : err);
     }
     process.exit(1);
@@ -306,7 +319,7 @@ export function saveSystemDataToKV(data: SystemData, isRemote: boolean): void {
     runWrangler(args);
     console.error('[SUCCESS] Successfully updated KV data.');
   } catch (err) {
-    console.error('[E1004] Failed to update KV data.');
+    console.error('[ERROR] Failed to update KV data.');
     console.error('Troubleshooting: Check Wrangler authentication and binding settings.');
     console.error('Details:', err instanceof Error ? err.message : err);
     process.exit(1);
@@ -328,7 +341,7 @@ export function triggerCronCheck(isRemote: boolean): void {
 
 export async function main(rawArgs: string[] = process.argv.slice(2)): Promise<void> {
   process.on('SIGINT', () => {
-    console.error('\n[E1300] Process interrupted and cancelled.');
+    console.error('\n[ERROR] Process interrupted and cancelled.');
     process.exit(130);
   });
 
@@ -336,16 +349,16 @@ export async function main(rawArgs: string[] = process.argv.slice(2)): Promise<v
 
   if (parsed.action === 'version') {
     console.log(`v${CLI_VERSION}`);
-    process.exit(0);
+    process.exit(parsed.exitCode);
   }
 
   if (parsed.action === 'help') {
     printUsage();
-    process.exit(0);
+    process.exit(parsed.exitCode);
   }
 
   if (parsed.action === 'error') {
-    console.error(`[${parsed.errorCode}] ${parsed.message}`);
+    console.error(`[ERROR] ${parsed.message}`);
     printUsage();
     process.exit(parsed.exitCode);
   }
@@ -353,7 +366,7 @@ export async function main(rawArgs: string[] = process.argv.slice(2)): Promise<v
   const { command, isRemote, isDryRun, autoConfirm } = parsed;
 
   const targetEnvText = isRemote ? 'Production' : 'Local';
-  console.log(`Dead Man's Switch CLI v${CLI_VERSION} [${targetEnvText}]\n`);
+  console.error(`Dead Man's Switch CLI v${CLI_VERSION} [${targetEnvText}]\n`);
 
   const currentData = getSystemDataFromKV(isRemote);
 
@@ -364,41 +377,41 @@ export async function main(rawArgs: string[] = process.argv.slice(2)): Promise<v
 
   const { updatedData, error } = computeNextSystemData(command, currentData);
   if (error) {
-    console.error(`[${error.errorCode}] ${error.message}`);
+    console.error(error.message);
     process.exit(1);
   }
 
-  console.log('--- Summary of Changes ---');
+  console.error('--- Summary of Changes ---');
   if (command === 'dead') {
-    console.log(`Status:           ${currentData.status} -> ${updatedData.status} (Simulated for Cron Trigger evaluation)`);
+    console.error(`Status:           ${currentData.status} -> ${updatedData.status} (Simulated for Cron Trigger evaluation)`);
   } else {
-    console.log(`Status:           ${currentData.status} -> ${updatedData.status}`);
+    console.error(`Status:           ${currentData.status} -> ${updatedData.status}`);
   }
-  console.log(`Last Active At:   ${currentData.last_active_at} -> ${updatedData.last_active_at}`);
-  console.log(`Warning Sent At:  ${String(currentData.warning_sent_at)} -> ${String(updatedData.warning_sent_at)}`);
-  console.log(`Dead Sent At:     ${String(currentData.dead_sent_at)} -> ${String(updatedData.dead_sent_at)}`);
-  console.log();
+  console.error(`Last Active At:   ${currentData.last_active_at} -> ${updatedData.last_active_at}`);
+  console.error(`Warning Sent At:  ${String(currentData.warning_sent_at)} -> ${String(updatedData.warning_sent_at)}`);
+  console.error(`Dead Sent At:     ${String(currentData.dead_sent_at)} -> ${String(updatedData.dead_sent_at)}`);
+  console.error();
 
   if (command === 'dead') {
-    console.log('[NOTE] Status is set to WARNING with last_active_at shifted past DEAD_DAYS.');
-    console.log('       The next Cron Trigger execution will validate this condition and transition status to DEAD & send notifications.\n');
+    console.error('[NOTE] Status is set to WARNING with last_active_at shifted past DEAD_DAYS.');
+    console.error('       The next Cron Trigger execution will validate this condition and transition status to DEAD & send notifications.\n');
   }
 
   if (isDryRun) {
-    console.log('[INFO] Skipped writing and trigger execution because --dry-run flag was set.');
+    console.error('[INFO] Skipped writing and trigger execution because --dry-run flag was set.');
     return;
   }
 
   if (isRemote && !autoConfirm) {
     const isInteractive = process.stdin.isTTY && process.stdout.isTTY && !process.env.CI;
     if (!isInteractive) {
-      console.error('[E1001] Error: --yes (-y) flag is required for remote execution in non-interactive environments (CI/pipelines).');
+      console.error('[ERROR] --yes (-y) flag is required for remote execution in non-interactive environments (CI/pipelines).');
       process.exit(1);
     }
 
     const confirmed = await confirmAction('[WARNING] Are you sure you want to update production KV data?');
     if (!confirmed) {
-      console.log('Operation cancelled.');
+      console.error('Operation cancelled.');
       return;
     }
   }
@@ -425,7 +438,7 @@ export function isMain(
 
 if (isMain()) {
   main().catch((err: unknown) => {
-    console.error('[E9999] Fatal error occurred:');
+    console.error('[ERROR] Fatal error occurred:');
     console.error(err instanceof Error ? err.stack ?? err.message : String(err));
     process.exit(1);
   });

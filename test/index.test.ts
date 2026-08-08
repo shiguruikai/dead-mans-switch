@@ -13,6 +13,7 @@ import {
 } from '@/services/kv';
 import type { Env } from '@/types';
 import { SystemLockedError } from '@/types';
+import { subDaysIso } from '@/utils/date';
 
 // KVNamespace のインメモリ用モック
 class MockKVNamespace {
@@ -283,8 +284,7 @@ describe('定時実行 Cron タスク（src/services/cron.ts）', () => {
 
   it('無活動期間が 6.5 日以上の場合は WARNING 状態へ遷移すること', async () => {
     const data = await getSystemData(mockKv as any);
-    const sevenDaysAgo = new Date(Date.now() - 7 * 86400 * 1000);
-    data.last_active_at = sevenDaysAgo.toISOString();
+    data.last_active_at = subDaysIso(7);
     await saveSystemData(mockKv as any, data);
 
     const result = await processScheduledCheck(env);
@@ -307,10 +307,9 @@ describe('定時実行 Cron タスク（src/services/cron.ts）', () => {
 
   it('無活動期間が 13.5 日以上で警告済みの場合 DEAD 状態へ遷移すること', async () => {
     const data = await getSystemData(mockKv as any);
-    const fourteenDaysAgo = new Date(Date.now() - 14 * 86400 * 1000);
-    data.last_active_at = fourteenDaysAgo.toISOString();
+    data.last_active_at = subDaysIso(14);
     data.status = 'WARNING';
-    data.warning_sent_at = new Date(Date.now() - 7 * 86400 * 1000).toISOString();
+    data.warning_sent_at = subDaysIso(7);
     await saveSystemData(mockKv as any, data);
 
     const result = await processScheduledCheck(env);
@@ -336,10 +335,9 @@ describe('定時実行 Cron タスク（src/services/cron.ts）', () => {
     env.KIN_EMAIL_ADDRESS = 'kin1@example.com, kin2@example.com, kin3@example.com';
 
     const data = await getSystemData(mockKv as any);
-    const fourteenDaysAgo = new Date(Date.now() - 14 * 86400 * 1000);
-    data.last_active_at = fourteenDaysAgo.toISOString();
+    data.last_active_at = subDaysIso(14);
     data.status = 'WARNING';
-    data.warning_sent_at = new Date(Date.now() - 7 * 86400 * 1000).toISOString();
+    data.warning_sent_at = subDaysIso(7);
     await saveSystemData(mockKv as any, data);
 
     const result = await processScheduledCheck(env);
@@ -362,10 +360,9 @@ describe('定時実行 Cron タスク（src/services/cron.ts）', () => {
     });
 
     const data = await getSystemData(mockKv as any);
-    const fourteenDaysAgo = new Date(Date.now() - 14 * 86400 * 1000);
-    data.last_active_at = fourteenDaysAgo.toISOString();
+    data.last_active_at = subDaysIso(14);
     data.status = 'WARNING';
-    data.warning_sent_at = new Date(Date.now() - 7 * 86400 * 1000).toISOString();
+    data.warning_sent_at = subDaysIso(7);
     await saveSystemData(mockKv as any, data);
 
     const result = await processScheduledCheck(env);

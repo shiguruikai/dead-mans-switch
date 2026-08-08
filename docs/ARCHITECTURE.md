@@ -213,8 +213,9 @@ Wrangler CLI 経由で KV 状態の更新やメール送信シミュレーショ
 
 ### 8.2. 安全設計
 
+- **STDOUT / STDERR の分離**: パイプライン処理（`pnpm cli status | jq` 等）を破壊しないよう、JSON 状態データのみを STDOUT に出力し、ログ・ヘルプ等はすべて STDERR に出力。
 - **設定ファイル自動読み込み**: `wrangler.jsonc` 内の `vars`（`WARNING_DAYS` / `DEAD_DAYS`）を読み込んでシミュレーション日数を算出。
 - **誤操作防止・CI ガード**: リモート（`--remote`）実行時は変更差分を表示し実行確認。非 TTY（CI 等）環境では `--yes`（`-y`）なしの実行を自動ブロック。
-- **実行時依存ゼロの保証**: ESLint（`no-restricted-imports`）により `src/` のモジュール依存を禁止（型定義のみを参照可能）。
-- **エラーハンドリング**: 一意なエラーコード（`E1001`〜`E1006`）と POSIX 準拠の終了コード（exit code 2 等）を返却。
+- **依存モジュール制限**: ESLint（`no-restricted-imports`）により `scripts/` からの `src/` 依存を `@/types` および `@/utils` に限定。
+- **エラーハンドリング**: エラー表示を `[ERROR]` に統一し、POSIX 準拠の終了コード（exit code 2 等）を返却。
 - **補助機能**: `--dry-run` による事前確認、`-v` / `--version` でのバージョン表示、`-h` / `--help` でのヘルプ表示に対応。

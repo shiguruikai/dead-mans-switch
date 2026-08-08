@@ -104,7 +104,7 @@ export default defineConfig([
     },
   },
 
-  // scripts/ 配下の実行時依存（@/types 以外の @/* モジュール）制限ルール
+  // scripts/ 配下の実行時依存（@/types および @/utils 以外の @/* モジュール）制限ルール
   {
     files: ['scripts/**/*.{ts,js}'],
     rules: {
@@ -113,8 +113,8 @@ export default defineConfig([
         {
           patterns: [
             {
-              group: ['@/*', '!@/types'],
-              message: 'scripts/ 配下から src/ の実行時モジュールへの依存は禁止されています。@/types の型定義のみ使用してください。',
+              group: ['@/*', '!@/types', '!@/utils'],
+              message: 'scripts/ 配下から src/ のモジュールへの依存は制限されています。@/types および @/utils のみ使用可能です。',
             },
           ],
         },

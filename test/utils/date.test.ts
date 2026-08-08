@@ -7,6 +7,8 @@ import {
   isValidDate,
   MS_PER_DAY,
   MS_PER_SECOND,
+  subDays,
+  subDaysIso,
 } from '@/utils/date';
 
 describe('日付・時間ユーティリティ（src/utils/date.ts）', () => {
@@ -23,6 +25,22 @@ describe('日付・時間ユーティリティ（src/utils/date.ts）', () => {
 
     it('不正な日付文字列で false を返すこと', () => {
       expect(isValidDate('invalid-date-string')).toBe(false);
+    });
+  });
+
+  describe('subDays', () => {
+    it('指定した日数前の Date オブジェクトを正しく計算できること', () => {
+      const base = new Date('2026-08-10T12:00:00.000Z');
+      const result = subDays(base, 3);
+      expect(result.toISOString()).toBe('2026-08-07T12:00:00.000Z');
+    });
+  });
+
+  describe('subDaysIso', () => {
+    it('指定した日数前の ISO 日付文字列を正しく計算できること', () => {
+      const base = new Date('2026-08-10T12:00:00.000Z');
+      const result = subDaysIso(3, base);
+      expect(result).toBe('2026-08-07T12:00:00.000Z');
     });
   });
 
