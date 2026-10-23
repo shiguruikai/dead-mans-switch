@@ -1,7 +1,7 @@
 import type { PushSubscription } from 'web-push';
 
 import type { Env, SystemData } from '@/types';
-import { differenceInSeconds } from '@/utils/date';
+import { differenceInSeconds, isValidDate } from '@/utils/date';
 
 import { sendEmail } from './email';
 import { getSystemData, saveSystemData } from './kv';
@@ -22,8 +22,13 @@ export async function processScheduledCheck(env: Env): Promise<SystemData> {
   }
 
   const data = await getSystemData(env.DMS_KV);
+  const lastActiveAt = new Date(data.last_active_at);
+  // 不正な日時は経過時間 0 と計算されスイッチが作動しなくなるため、エラーとして記録する
+  if (!isValidDate(lastActiveAt)) {
+    throw new TypeError(`Invalid last_active_at in KV: ${data.last_active_at}`);
+  }
   const now = new Date();
-  const diffSeconds = differenceInSeconds(now, new Date(data.last_active_at));
+  const diffSeconds = differenceInSeconds(now, lastActiveAt);
 
   // 12時間マージン (43,200秒)
   const warningThreshold = warningDays * 86400 - 43200;

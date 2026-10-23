@@ -321,6 +321,15 @@ describe('定時実行 Cron タスク（src/services/cron.ts）', () => {
     await expect(processScheduledCheck(env)).rejects.toThrow('WARNING_DAYS must be strictly less than DEAD_DAYS');
   });
 
+  it('last_active_at が不正な日時の場合は通知を送らずに例外をスローすること', async () => {
+    const data = await getSystemData(mockKv as any);
+    data.last_active_at = 'invalid-date';
+    await saveSystemData(mockKv as any, data);
+
+    await expect(processScheduledCheck(env)).rejects.toThrow('Invalid last_active_at in KV');
+    expect(env.SEND_EMAIL.send).not.toHaveBeenCalled();
+  });
+
   it('最終アクティビティが最近の場合は NORMAL 状態を維持すること', async () => {
     const result = await processScheduledCheck(env);
     expect(result.status).toBe('NORMAL');

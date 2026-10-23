@@ -160,6 +160,8 @@ Cloudflare Dashboard > **Zero Trust** > **Access controls** にて、Worker の�
 
 Cron 実行時刻とハートビート送信時刻の誤差による判定遅延を防ぐため、生存確認リマインダー（`WARNING_DAYS * 86400 - 43200` 秒）および死後処理（`DEAD_DAYS * 86400 - 43200` 秒）の両方に **12時間マージン** を適用する。
 
+KV の `last_active_at` が日時として解釈できない場合は、経過時間を判定できずスイッチが作動しなくなるため、通知を送らずに例外を送出して Workers Logs に記録する（生存報告で `last_active_at` が上書きされると復旧する）。
+
 Web Push 送信時には登録されている全端末（`push_subscriptions`）へ並行一括送信（`Promise.all`）を行い、エラー応答（404 Not Found または 410 Gone）が返った期限切れ無効端末は KV 配列から自動削除（クリーンアップ）する。
 
 ```mermaid
