@@ -17,6 +17,7 @@ import {
   parseCliArgs,
   printUsage,
   quoteShellArg,
+  systemDataSchema,
 } from './cli';
 
 vi.mock('node:child_process', () => ({ execSync: vi.fn() }));
@@ -147,6 +148,7 @@ describe('Dead Man\'s Switch CLI ユニットテスト (scripts/cli.ts)', () => 
       last_active_at: '2026-01-01T00:00:00.000Z',
       warning_sent_at: null,
       dead_sent_at: null,
+      dead_sent_to: [],
       push_subscriptions: [],
     };
 
@@ -199,6 +201,32 @@ describe('Dead Man\'s Switch CLI ユニットテスト (scripts/cli.ts)', () => 
       expect(updatedData.status).toBe('NORMAL');
       expect(updatedData.last_active_at).toBe(now.toISOString());
       expect(updatedData.warning_sent_at).toBeNull();
+    });
+
+    it.each(['warning', 'dead', 'reset'] as const)('%s コマンド実行時に死後通知の送信済み宛先がクリアされること', (command) => {
+      const deadData: SystemData = {
+        ...baseData,
+        status: 'DEAD',
+        dead_sent_at: '2026-08-01T00:00:00.000Z',
+        dead_sent_to: ['kin1@example.com'],
+      };
+      const { updatedData } = computeNextSystemData(command, deadData, new Date('2026-08-07T12:00:00.000Z'), mockConfig);
+
+      expect(updatedData.dead_sent_at).toBeNull();
+      expect(updatedData.dead_sent_to).toEqual([]);
+    });
+  });
+
+  describe('systemDataSchema (KV データの検証)', () => {
+    it('dead_sent_to を持たない既存の KV データは空配列として読み込むこと', () => {
+      const legacyData = {
+        status: 'NORMAL',
+        last_active_at: '2026-01-01T00:00:00.000Z',
+        warning_sent_at: null,
+        dead_sent_at: null,
+        push_subscriptions: [],
+      };
+      expect(systemDataSchema.parse(legacyData).dead_sent_to).toEqual([]);
     });
   });
 

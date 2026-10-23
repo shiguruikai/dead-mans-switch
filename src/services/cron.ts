@@ -3,7 +3,7 @@ import type { PushSubscription } from 'web-push';
 import type { Env, SystemData } from '@/types';
 import { differenceInSeconds, isValidDate } from '@/utils/date';
 
-import { sendEmail } from './email';
+import { parseEmailAddresses, sendEmail } from './email';
 import { getSystemData, saveSystemData } from './kv';
 import { sendNotificationToAll } from './push';
 
@@ -49,11 +49,12 @@ export async function processScheduledCheck(env: Env): Promise<SystemData> {
     }
   } else if (data.status === 'WARNING') {
     if (diffSeconds >= deadThreshold && data.warning_sent_at !== null) {
-      const result = await sendDeadNotifications(env, now);
+      const result = await sendDeadNotifications(env, now, []);
       updatedData = {
         ...data,
         status: 'DEAD',
         dead_sent_at: result.deadSentAt,
+        dead_sent_to: result.deadSentTo,
       };
       await saveSystemData(env.DMS_KV, updatedData);
     } else if (data.warning_sent_at === null) {
@@ -68,12 +69,13 @@ export async function processScheduledCheck(env: Env): Promise<SystemData> {
       await saveSystemData(env.DMS_KV, updatedData);
     }
   } else if (data.dead_sent_at === null) {
-    // 前回死後通知送信が失敗していた場合のリトライ
-    const result = await sendDeadNotifications(env, now);
+    // 前回までに死後通知を送信できなかった宛先へのリトライ
+    const result = await sendDeadNotifications(env, now, data.dead_sent_to);
     updatedData = {
       ...data,
       status: 'DEAD',
       dead_sent_at: result.deadSentAt,
+      dead_sent_to: result.deadSentTo,
     };
     await saveSystemData(env.DMS_KV, updatedData);
   }
@@ -139,29 +141,38 @@ async function sendWarningNotifications(
 
 interface DeadResult {
   deadSentAt: string | null;
+  deadSentTo: string[];
 }
 
 const DEFAULT_DEAD_EMAIL_BODY
   = '本通知は Dead Man\'s Switch システムにより自動送信されています。\n規定期間の生存シグナルが確認できなかったため、手続情報および案内をお送りいたします。';
 
-async function sendDeadNotifications(env: Env, now: Date): Promise<DeadResult> {
+async function sendDeadNotifications(env: Env, now: Date, alreadySentTo: string[]): Promise<DeadResult> {
   // 未設定だけでなく空文字・空白のみの場合も既定の本文を使用する
   const deadBodyTemplate = env.DEAD_EMAIL_BODY?.trim() ? env.DEAD_EMAIL_BODY : DEFAULT_DEAD_EMAIL_BODY;
 
+  // 送信済みの宛先を除き、まだ送信できていない宛先にだけ送る
+  const pendingRecipients = parseEmailAddresses(env.KIN_EMAIL_ADDRESS)
+    .filter((recipient) => !alreadySentTo.includes(recipient));
+  const deadSentTo = [...alreadySentTo];
   let deadSentAt: string | null = null;
 
   try {
     const text = deadBodyTemplate.replaceAll('${BASE_URL}', env.BASE_URL);
-    await sendEmail(env.SEND_EMAIL, {
+    const result = await sendEmail(env.SEND_EMAIL, {
       from: env.SENDER_EMAIL_ADDRESS,
-      to: env.KIN_EMAIL_ADDRESS,
+      to: pendingRecipients.join(', '),
       subject: env.DEAD_EMAIL_SUBJECT,
       text,
     });
-    deadSentAt = now.toISOString();
+    deadSentTo.push(...result.sentTo);
+    // 全宛先への送信が完了した時点で送信日時を記録する（未完了の間は次回 Cron で再送）
+    if (result.failedTo.length === 0) {
+      deadSentAt = now.toISOString();
+    }
   } catch (err) {
     console.error('Failed to send dead email:', err);
   }
 
-  return { deadSentAt };
+  return { deadSentAt, deadSentTo };
 }

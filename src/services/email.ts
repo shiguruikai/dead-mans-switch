@@ -7,8 +7,8 @@ export interface SendEmailOptions {
 }
 
 export interface SendEmailResult {
-  successCount: number;
-  failureCount: number;
+  sentTo: string[];
+  failedTo: string[];
 }
 
 /**
@@ -25,7 +25,7 @@ export function parseEmailAddresses(rawAddresses: string): string[] {
 }
 
 /**
- * 単一または複数宛先へ並列でメールを送信します。
+ * 単一または複数宛先へ並列でメールを送信し、送信を受け付けられた宛先と失敗した宛先を返します。
  * 少なくとも1件以上の送信が成功した場合、正常終了と見なします。
  * 1件も成功しなかった場合はエラーをスローします。
  */
@@ -50,22 +50,22 @@ export async function sendEmail(
     ),
   );
 
-  let successCount = 0;
-  let failureCount = 0;
+  const sentTo: string[] = [];
+  const failedTo: string[] = [];
 
   results.forEach((result, index) => {
     const recipient = recipients[index];
     if (result.status === 'fulfilled') {
-      successCount++;
+      sentTo.push(recipient);
     } else {
-      failureCount++;
+      failedTo.push(recipient);
       console.error(`Failed to send email to ${recipient}:`, result.reason);
     }
   });
 
-  if (successCount === 0) {
+  if (sentTo.length === 0) {
     throw new Error(`Failed to send email to all recipients (${recipients.join(', ')})`);
   }
 
-  return { successCount, failureCount };
+  return { sentTo, failedTo };
 }

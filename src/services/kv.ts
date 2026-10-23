@@ -7,24 +7,28 @@ const KV_KEY = 'system_data';
 
 export const MAX_PUSH_SUBSCRIPTIONS = 20;
 
+// dead_sent_to 追加前に保存されたデータは当該フィールドを持たない
+type StoredSystemData = Omit<SystemData, 'dead_sent_to'> & Partial<Pick<SystemData, 'dead_sent_to'>>;
+
 export function getDefaultSystemData(): SystemData {
   return {
     status: 'NORMAL',
     last_active_at: new Date().toISOString(),
     warning_sent_at: null,
     dead_sent_at: null,
+    dead_sent_to: [],
     push_subscriptions: [],
   };
 }
 
 export async function getSystemData(kv: KVNamespace): Promise<SystemData> {
-  const data = await kv.get<SystemData>(KV_KEY, 'json');
+  const data = await kv.get<StoredSystemData>(KV_KEY, 'json');
   if (!data) {
     const initialData: SystemData = getDefaultSystemData();
     await saveSystemData(kv, initialData);
     return initialData;
   }
-  return data;
+  return { ...data, dead_sent_to: data.dead_sent_to ?? [] };
 }
 
 export async function saveSystemData(kv: KVNamespace, data: SystemData): Promise<void> {

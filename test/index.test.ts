@@ -78,6 +78,7 @@ describe('KV サービス層（src/services/kv.ts）', () => {
     expect(data.status).toBe('NORMAL');
     expect(data.warning_sent_at).toBeNull();
     expect(data.dead_sent_at).toBeNull();
+    expect(data.dead_sent_to).toEqual([]);
     expect(data.push_subscriptions).toEqual([]);
     expect(typeof data.last_active_at).toBe('string');
   });
@@ -425,6 +426,7 @@ describe('定時実行 Cron タスク（src/services/cron.ts）', () => {
     const result = await processScheduledCheck(env);
     expect(result.status).toBe('DEAD');
     expect(result.dead_sent_at).not.toBeNull();
+    expect(result.dead_sent_to).toEqual(['kin@example.com']);
     expect(env.SEND_EMAIL.send).toHaveBeenCalledTimes(1);
   });
 
@@ -490,15 +492,16 @@ describe('定時実行 Cron タスク（src/services/cron.ts）', () => {
     expect(env.SEND_EMAIL.send).toHaveBeenNthCalledWith(3, expect.objectContaining({ to: 'kin3@example.com' }));
   });
 
-  it('一部の宛先への送信が失敗しても DEAD 状態へ更新完了すること', async () => {
+  it('一部の宛先への送信が失敗した場合は、次回以降の Cron で失敗した宛先にのみ成功するまで再送すること', async () => {
     const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => { /* noop */ });
     env.KIN_EMAIL_ADDRESS = 'kin1@example.com, failed@example.com';
-    env.SEND_EMAIL.send = vi.fn().mockImplementation(({ to }) => {
+    const failingSend = vi.fn().mockImplementation(({ to }) => {
       if (to === 'failed@example.com') {
         return Promise.reject(new Error('Failed delivery'));
       }
       return Promise.resolve(undefined);
     });
+    env.SEND_EMAIL.send = failingSend;
 
     const data = await getSystemData(mockKv as any);
     data.last_active_at = subDays(new Date(), 14).toISOString();
@@ -506,11 +509,57 @@ describe('定時実行 Cron タスク（src/services/cron.ts）', () => {
     data.warning_sent_at = subDays(new Date(), 7).toISOString();
     await saveSystemData(mockKv as any, data);
 
-    const result = await processScheduledCheck(env);
-    expect(result.status).toBe('DEAD');
-    expect(result.dead_sent_at).not.toBeNull();
-    expect(env.SEND_EMAIL.send).toHaveBeenCalledTimes(2);
+    // 1 回目: 一部の宛先のみ送信でき、全宛先が完了するまで dead_sent_at は記録しない
+    const first = await processScheduledCheck(env);
+    expect(first.status).toBe('DEAD');
+    expect(first.dead_sent_at).toBeNull();
+    expect(first.dead_sent_to).toEqual(['kin1@example.com']);
+    expect(failingSend).toHaveBeenCalledTimes(2);
     expect(consoleErrorSpy).toHaveBeenCalled();
+
+    // 2 回目: 失敗し続ける宛先にのみ再送し、送信済みの宛先には送らない
+    failingSend.mockClear();
+    const second = await processScheduledCheck(env);
+    expect(second.dead_sent_at).toBeNull();
+    expect(second.dead_sent_to).toEqual(['kin1@example.com']);
+    expect(failingSend).toHaveBeenCalledTimes(1);
+    expect(failingSend).toHaveBeenCalledWith(expect.objectContaining({ to: 'failed@example.com' }));
+
+    // 3 回目: 送信に成功すると dead_sent_at を記録する
+    const succeedingSend = vi.fn().mockResolvedValue(undefined);
+    env.SEND_EMAIL.send = succeedingSend;
+    const third = await processScheduledCheck(env);
+    expect(third.dead_sent_at).not.toBeNull();
+    expect(third.dead_sent_to).toEqual(['kin1@example.com', 'failed@example.com']);
+    expect(succeedingSend).toHaveBeenCalledTimes(1);
+    expect(succeedingSend).toHaveBeenCalledWith(expect.objectContaining({ to: 'failed@example.com' }));
+
+    // 4 回目: 全宛先への送信が完了しているため何も送らない
+    succeedingSend.mockClear();
+    await processScheduledCheck(env);
+    expect(succeedingSend).not.toHaveBeenCalled();
     consoleErrorSpy.mockRestore();
+  });
+
+  it('dead_sent_to を持たない既存の KV データでも死後通知の再送を判定できること', async () => {
+    const legacy = (deadSentAt: string | null) => JSON.stringify({
+      status: 'DEAD',
+      last_active_at: subDays(new Date(), 15).toISOString(),
+      warning_sent_at: subDays(new Date(), 8).toISOString(),
+      dead_sent_at: deadSentAt,
+      push_subscriptions: [],
+    });
+
+    // 送信完了済み（dead_sent_at あり）のデータは再送しない
+    await mockKv.put('system_data', legacy(subDays(new Date(), 1).toISOString()));
+    await processScheduledCheck(env);
+    expect(env.SEND_EMAIL.send).not.toHaveBeenCalled();
+
+    // 未送信（dead_sent_at が null）のデータは全宛先へ送る
+    await mockKv.put('system_data', legacy(null));
+    const result = await processScheduledCheck(env);
+    expect(env.SEND_EMAIL.send).toHaveBeenCalledTimes(1);
+    expect(result.dead_sent_at).not.toBeNull();
+    expect(result.dead_sent_to).toEqual(['kin@example.com']);
   });
 });

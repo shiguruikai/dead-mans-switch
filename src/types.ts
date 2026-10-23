@@ -21,6 +21,7 @@ export interface SystemData {
   last_active_at: string;
   warning_sent_at: string | null;
   dead_sent_at: string | null;
+  dead_sent_to: string[];
   push_subscriptions: PushSubscription[];
 }
 

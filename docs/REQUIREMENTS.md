@@ -59,9 +59,10 @@ stateDiagram-v2
    - Web Push 送信時に無効（404/410）と判定された端末は登録リストから削除する。
 3. **死後通知判定**:
    - `status === "WARNING"`、不活動時間が `DEAD_DAYS`（マージン適用）以上、かつ `warning_sent_at !== null`（リマインダー送信済み）の場合、`status` を `DEAD` に更新する。
-   - 死後通知先（`KIN_EMAIL_ADDRESS`）宛てにメールを送信し、成功時に `dead_sent_at` を記録する。
+   - 死後通知先（`KIN_EMAIL_ADDRESS`）の各宛先へメールを送信し、送信できた宛先を `dead_sent_to` に記録する。全宛先への送信が完了した時点で `dead_sent_at` を記録する。
 4. **再試行処理**:
-   - 通知送信に失敗した場合、次回 Cron 実行時に送信完了タイムスタンプ（`warning_sent_at` / `dead_sent_at`）が `null` であることを確認して再試行する。
+   - 生存確認リマインダーの送信に失敗した場合、次回 Cron 実行時に `warning_sent_at` が `null` であることを確認して再試行する。
+   - 死後通知は、`dead_sent_at` が `null` の間、次回以降の Cron 実行時に `dead_sent_to` に含まれない（未送信の）宛先にのみ、全宛先への送信が完了するまで再試行する（回数の上限なし。送信済みの宛先へは重複送信しない）。
 
 ## 4. 非機能要件
 

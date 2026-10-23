@@ -74,6 +74,7 @@ export const systemDataSchema = z.object({
   last_active_at: z.string(),
   warning_sent_at: z.string().nullable(),
   dead_sent_at: z.string().nullable(),
+  dead_sent_to: z.array(z.string()).default([]),
   push_subscriptions: z.array(pushSubscriptionSchema),
 });
 
@@ -209,16 +210,19 @@ export function computeNextSystemData(
     updatedData.last_active_at = subDays(now, config.warningDays + 1).toISOString();
     updatedData.warning_sent_at = null;
     updatedData.dead_sent_at = null;
+    updatedData.dead_sent_to = [];
   } else if (command === 'dead') {
     updatedData.status = 'WARNING';
     updatedData.last_active_at = subDays(now, config.deadDays + 1).toISOString();
     updatedData.warning_sent_at = subDays(now, config.warningDays).toISOString();
     updatedData.dead_sent_at = null;
+    updatedData.dead_sent_to = [];
   } else {
     updatedData.status = 'NORMAL';
     updatedData.last_active_at = now.toISOString();
     updatedData.warning_sent_at = null;
     updatedData.dead_sent_at = null;
+    updatedData.dead_sent_to = [];
   }
 
   return { updatedData };
@@ -299,6 +303,7 @@ export function getSystemDataFromKV(isRemote: boolean): SystemData {
         last_active_at: new Date().toISOString(),
         warning_sent_at: null,
         dead_sent_at: null,
+        dead_sent_to: [],
         push_subscriptions: [],
       };
     }
@@ -415,6 +420,7 @@ export async function main(rawArgs: string[] = process.argv.slice(2)): Promise<v
   console.error(`Last Active At:   ${currentData.last_active_at} -> ${updatedData.last_active_at}`);
   console.error(`Warning Sent At:  ${String(currentData.warning_sent_at)} -> ${String(updatedData.warning_sent_at)}`);
   console.error(`Dead Sent At:     ${String(currentData.dead_sent_at)} -> ${String(updatedData.dead_sent_at)}`);
+  console.error(`Dead Sent To:     ${currentData.dead_sent_to.join(', ') || '(none)'} -> ${updatedData.dead_sent_to.join(', ') || '(none)'}`);
   console.error();
 
   if (command === 'dead') {

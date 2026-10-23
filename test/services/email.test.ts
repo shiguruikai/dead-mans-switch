@@ -47,7 +47,7 @@ describe('メール処理モジュール（src/services/email.ts）', () => {
         text: 'テスト本文',
       });
 
-      expect(result).toEqual({ successCount: 2, failureCount: 0 });
+      expect(result).toEqual({ sentTo: ['kin1@example.com', 'kin2@example.com'], failedTo: [] });
       expect(sendMock).toHaveBeenCalledTimes(2);
       expect(sendMock).toHaveBeenCalledWith({
         from: 'noreply@example.com',
@@ -65,7 +65,7 @@ describe('メール処理モジュール（src/services/email.ts）', () => {
       });
     });
 
-    it('少なくとも1つの宛先への送信が成功すれば結果が成功扱いとなること', async () => {
+    it('少なくとも1つの宛先への送信が成功すれば成功扱いとなり、送信できた宛先と失敗した宛先を返すこと', async () => {
       const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => { /* noop */ });
       const sendMock = vi.fn().mockImplementation(({ to }) => {
         if (to === 'failed@example.com') {
@@ -82,7 +82,7 @@ describe('メール処理モジュール（src/services/email.ts）', () => {
         text: 'テスト本文',
       });
 
-      expect(result).toEqual({ successCount: 1, failureCount: 1 });
+      expect(result).toEqual({ sentTo: ['success@example.com'], failedTo: ['failed@example.com'] });
       expect(sendMock).toHaveBeenCalledTimes(2);
       expect(consoleErrorSpy).toHaveBeenCalled();
       consoleErrorSpy.mockRestore();

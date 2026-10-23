@@ -69,7 +69,8 @@ dead-mans-switch/
 | `status` | `"NORMAL"` \| `"WARNING"` \| `"DEAD"` | システムの現在状態 |
 | `last_active_at` | ISO 8601 文字列 | 最終生存確認日時 |
 | `warning_sent_at` | ISO 8601 文字列 \| `null` | 生存確認リマインダー成功日時 |
-| `dead_sent_at` | ISO 8601 文字列 \| `null` | 死後通知送信成功日時（リトライ判定用） |
+| `dead_sent_at` | ISO 8601 文字列 \| `null` | 全宛先への死後通知送信完了日時（`null` の間は未送信の宛先へ再送） |
+| `dead_sent_to` | 文字列配列 | 死後通知の送信を受け付けられた宛先（再送対象の判定用。未保持の既存データは空配列として扱う） |
 | `push_subscriptions` | JSON 配列 (`PushSubscription[]`) | 登録済み複数端末の Web Push 購読情報リスト |
 
 ## 4. エンドポイント & Cloudflare Zero Trust 設計
@@ -177,10 +178,10 @@ flowchart TD
     DiffD -->|"No"| CheckWRetry{"warning_sent_at === null"}
     CheckWRetry -->|"Yes（前回失敗）"| ActionW
     CheckWRetry -->|"No"| End
-    DiffD -->|"Yes（リマインダー送信完了済み）"| ActionD["1. status=DEAD 更新\n2. 死後通知先へ SENDER_EMAIL_ADDRESS より死後通知送信\n3. 成功時 dead_sent_at 記録"]
+    DiffD -->|"Yes（リマインダー送信完了済み）"| ActionD["1. status=DEAD 更新\n2. 死後通知先のうち dead_sent_to に含まれない宛先へ SENDER_EMAIL_ADDRESS より死後通知送信\n3. 送信できた宛先を dead_sent_to に追記\n4. 全宛先完了時 dead_sent_at 記録"]
 
     CheckStatus -->|"DEAD"| CheckDeadRetry{"dead_sent_at === null"}
-    CheckDeadRetry -->|"Yes（前回失敗）"| ActionD
+    CheckDeadRetry -->|"Yes（未送信の宛先あり）"| ActionD
     CheckDeadRetry -->|"No"| End["終了（ロックアウト中）"]
     ActionW --> End
     ActionD --> End
@@ -192,7 +193,10 @@ Cloudflare Workers の `send_email` バインディング（`env.SEND_EMAIL`）�
 
 - **送信元メールアドレス**: Cloudflare 上で所有・管理（Email Routing 設定済み）しているカスタムドメインのアドレス `SENDER_EMAIL_ADDRESS`（例: `noreply@yourdomain.com`）を使用する。
 - **完全無料（$0）仕様**: Cloudflare Dashboard > **Email Routing** > **Destination Addresses** にて事前認証（Verify）が完了している送信先メールアドレス（本人通知先 `OWNER_EMAIL_ADDRESS` および死後通知先 `KIN_EMAIL_ADDRESS`）宛てに送信する場合、Workers Free プランを含むすべてのプランで送信数上限のカウント対象外（完全無料）で直接送信可能。
-- **複数宛先配信・エラー処理**: `OWNER_EMAIL_ADDRESS` および `KIN_EMAIL_ADDRESS` は区切り文字（カンマ・セミコロン）で複数指定可能。パース・重複排除のうえ `Promise.allSettled` で並列送信し、1件以上の成功で送信完了日時（`warning_sent_at` / `dead_sent_at`）を記録する（失敗した宛先はエラーログを出力）。
+- **複数宛先配信・エラー処理**: `OWNER_EMAIL_ADDRESS` および `KIN_EMAIL_ADDRESS` は区切り文字（カンマ・セミコロン）で複数指定可能。パース・重複排除のうえ `Promise.allSettled` で並列送信し、送信できた宛先と失敗した宛先を返す（失敗した宛先はエラーログを出力）。
+  - 生存確認リマインダー: 1件以上の成功で `warning_sent_at` を記録する。
+  - 死後通知: 送信できた宛先を `dead_sent_to` に記録し、全宛先の完了時に `dead_sent_at` を記録する。失敗した宛先は次回以降の Cron で成功するまで再送する（認証済みの宛先への送信および受け付けを拒否された送信は無料のため、回数の上限は設けない）。
+- **送信成否の判定範囲**: `send()` は Email Service がメールを受け付けた時点で完了し、受け付けを拒否された場合（未認証の宛先、形式不正、レート制限、内部エラー等）に例外となる。受け付け後の配送失敗（受信側メールボックスの満杯・削除、迷惑メール判定等）は検知できない。
 - **単一責任設計**: `sendEmail` 関数は `env.SEND_EMAIL`（送信バインディング）のみを引数として受け取り、環境変数全体（`Env`）に依存しない独立モジュールとして動作する。本文中のプレースホルダー（`${BASE_URL}` 等）の動的置換は呼び出し側で行う。
 
 ## 7. 設定・環境変数設計
