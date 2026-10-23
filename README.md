@@ -103,8 +103,8 @@ pnpm typecheck
 pnpm lint
 pnpm test
 
-# 2. 本番デプロイ
-pnpm deploy
+# 2. 本番デプロイ（`pnpm deploy` は pnpm 組み込みコマンドのため `run` を付ける）
+pnpm run deploy
 ```
 
 ### 4. メール送信・通知シミュレーションテスト（CLI）
@@ -182,7 +182,7 @@ curl -X POST "https://<YOUR_WORKER_DOMAIN>/api/ping" \
 
 #### 5.5 環境変数の変更手順（運用開始後）
 
-- [wrangler.jsonc](wrangler.jsonc) 内の `vars` の値を編集し、`pnpm deploy` を再実行するだけで更新できます。
+- [wrangler.jsonc](wrangler.jsonc) 内の `vars` の値を編集し、`pnpm run deploy` を再実行するだけで更新できます。
 - ※ Cloudflare Dashboard > **Workers & Pages** > 本 Worker > **Settings** > **Variables and Secrets** から直接編集することも可能です。
 
 > [!IMPORTANT]

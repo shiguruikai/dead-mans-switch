@@ -23,7 +23,7 @@ Cloudflare Workers 上で稼働する、個人専用のセルフホスト型死�
 - `pnpm typecheck`: 型定義自動生成（`cf-typegen`）および TypeScript 型チェック (`tsc --noEmit`)
 - `pnpm lint:fix`: `eslint --fix .`
 - `pnpm test`: Vitest による全単体テスト実行
-- `pnpm deploy`: Cloudflare Workers への本番デプロイ (`pnpm build && wrangler deploy --minify`)
+- `pnpm run deploy`: Cloudflare Workers への本番デプロイ (`pnpm build && wrangler deploy`)。`pnpm deploy` は pnpm 組み込みコマンドとなるため `run` を省略しないこと
 - `pnpm wrangler kv namespace create DMS_KV`: KV ネームスペースの作成
 
 ## 設計・開発ルール
