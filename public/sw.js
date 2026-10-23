@@ -21,8 +21,6 @@ self.addEventListener('push', (event) => {
 
   const options = {
     body: body,
-    icon: '/favicon.ico',
-    badge: '/favicon.ico',
     tag: 'dms-warning-notification',
     renotify: true,
     data: { url: url },
