@@ -18,8 +18,6 @@ export function getDefaultSystemData(): SystemData {
   };
 }
 
-export const DEFAULT_SYSTEM_DATA: SystemData = getDefaultSystemData();
-
 export async function getSystemData(kv: KVNamespace): Promise<SystemData> {
   const data = await kv.get<SystemData>(KV_KEY, 'json');
   if (!data) {

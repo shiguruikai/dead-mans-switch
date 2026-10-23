@@ -149,6 +149,7 @@ describe('Hono API エンドポイント（src/index.tsx）', () => {
     expect(html).toContain('data-props');
     expect(html).toContain('NORMAL');
     expect(html).toContain('/src/client.tsx');
+    expect(html.match(/<title>/g)).toHaveLength(1);
   });
 
   it('GET / は DEAD ステータス時にロックアウト画面の HTML を返すこと', async () => {

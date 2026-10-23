@@ -134,7 +134,6 @@ export function CheckInContent({ data: initialData, vapidPublicKey }: Readonly<C
 
   return (
     <div class="card">
-      <title>Check-in - Dead Man's Switch</title>
       <div class="header">
         <h1>Dead Man's Switch</h1>
         <span class={`badge badge-${systemData.status}`}>{systemData.status}</span>
