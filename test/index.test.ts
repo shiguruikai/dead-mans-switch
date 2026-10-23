@@ -1,6 +1,7 @@
 import { testClient } from 'hono/testing';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { PushSubscription } from 'web-push';
+import { sendNotification } from 'web-push';
 
 import { app } from '@/index';
 import { processScheduledCheck } from '@/services/cron';
@@ -15,6 +16,9 @@ import {
 import type { Env } from '@/types';
 import { SystemLockedError } from '@/types';
 import { subDays } from '@/utils/date';
+
+// Web Push の外部送信をモックする
+vi.mock('web-push', () => ({ sendNotification: vi.fn() }));
 
 // KVNamespace のインメモリ用モック
 class MockKVNamespace {
@@ -305,6 +309,7 @@ describe('定時実行 Cron タスク（src/services/cron.ts）', () => {
   beforeEach(() => {
     mockKv = new MockKVNamespace();
     env = createMockEnv(mockKv);
+    vi.mocked(sendNotification).mockReset();
   });
 
   it('WARNING_DAYS および DEAD_DAYS の設定値を正常に検証すること', async () => {
@@ -345,6 +350,57 @@ describe('定時実行 Cron タスク（src/services/cron.ts）', () => {
     expect(result.status).toBe('WARNING');
     expect(result.warning_sent_at).not.toBeNull();
     expect(env.SEND_EMAIL.send).toHaveBeenCalledTimes(1);
+  });
+
+  it('WARNING 遷移時に全端末へ Web Push を送信し、404 / 410 を返した端末のみ削除すること', async () => {
+    const statusCodes: Record<string, number> = {
+      'https://push.example.com/ok': 201,
+      'https://push.example.com/gone': 410,
+      'https://push.example.com/not-found': 404,
+      'https://push.example.com/server-error': 500,
+    };
+    const subs: PushSubscription[] = Object.keys(statusCodes).map((endpoint) => ({
+      endpoint,
+      keys: { p256dh: 'p256', auth: 'auth' },
+    }));
+    vi.mocked(sendNotification).mockImplementation((sub) => {
+      const statusCode = statusCodes[sub.endpoint];
+      return statusCode < 400
+        ? Promise.resolve({ statusCode, body: '', headers: {} })
+        : Promise.reject(Object.assign(new Error('Push failed'), { statusCode }));
+    });
+
+    const data = await getSystemData(mockKv as any);
+    data.last_active_at = subDays(new Date(), 7).toISOString();
+    data.push_subscriptions = subs;
+    await saveSystemData(mockKv as any, data);
+
+    const result = await processScheduledCheck(env);
+    expect(result.status).toBe('WARNING');
+    expect(sendNotification).toHaveBeenCalledTimes(4);
+    expect(sendNotification).toHaveBeenCalledWith(
+      subs[0],
+      expect.stringContaining('"url":"/"'),
+      { vapidDetails: { subject: env.VAPID_SUBJECT, publicKey: env.VAPID_PUBLIC_KEY, privateKey: env.VAPID_PRIVATE_KEY } },
+    );
+    const remaining = ['https://push.example.com/ok', 'https://push.example.com/server-error'];
+    expect(result.push_subscriptions.map((sub) => sub.endpoint)).toEqual(remaining);
+    expect((await getSystemData(mockKv as any)).push_subscriptions.map((sub) => sub.endpoint)).toEqual(remaining);
+  });
+
+  it('警告メールの送信に失敗した場合は warning_sent_at を記録せずに WARNING へ遷移すること', async () => {
+    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => { /* noop */ });
+    env.SEND_EMAIL.send = vi.fn().mockRejectedValue(new Error('Delivery error'));
+
+    const data = await getSystemData(mockKv as any);
+    data.last_active_at = subDays(new Date(), 7).toISOString();
+    await saveSystemData(mockKv as any, data);
+
+    const result = await processScheduledCheck(env);
+    expect(result.status).toBe('WARNING');
+    expect(result.warning_sent_at).toBeNull();
+    expect(consoleErrorSpy).toHaveBeenCalledWith('Failed to send warning email:', expect.any(Error));
+    consoleErrorSpy.mockRestore();
   });
 
   it('WARNING 状態で warning_sent_at が null の場合は警告通知を再試行すること', async () => {
