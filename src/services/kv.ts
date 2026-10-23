@@ -2,7 +2,7 @@ import type { KVNamespace } from '@cloudflare/workers-types';
 import type { PushSubscription } from 'web-push';
 
 import type { SystemData } from '@/types';
-import { SystemLockedError } from '@/types';
+import { PushSubscriptionLimitError, SystemLockedError } from '@/types';
 
 const KV_KEY = 'system_data';
 
@@ -64,7 +64,7 @@ export async function addPushSubscription(
     updatedSubs[existingIndex] = subscription;
   } else {
     if (current.push_subscriptions.length >= MAX_PUSH_SUBSCRIPTIONS) {
-      throw new Error(`Push subscriptions limit exceeded (max ${MAX_PUSH_SUBSCRIPTIONS.toString()})`);
+      throw new PushSubscriptionLimitError(MAX_PUSH_SUBSCRIPTIONS);
     }
     updatedSubs = [...current.push_subscriptions, subscription];
   }

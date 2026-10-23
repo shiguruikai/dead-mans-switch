@@ -16,7 +16,7 @@ import {
   updateActivity,
 } from '@/services/kv';
 import type { Env } from '@/types';
-import { SystemLockedError } from '@/types';
+import { PushSubscriptionLimitError, SystemLockedError } from '@/types';
 import { differenceInDays } from '@/utils/date';
 
 const handlePing = async (c: Context<{ Bindings: Env }>) => {
@@ -33,6 +33,9 @@ const app = new Hono<{ Bindings: Env }>()
   .onError((err, c) => {
     if (err instanceof SystemLockedError) {
       return c.json({ error: err.message }, 403);
+    }
+    if (err instanceof PushSubscriptionLimitError) {
+      return c.json({ error: err.message }, 409);
     }
     // 不正な JSON ボディ等で Hono が投げる 4xx は、そのステータスのまま返す
     if (err instanceof HTTPException) {

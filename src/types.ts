@@ -10,6 +10,13 @@ export class SystemLockedError extends Error {
   }
 }
 
+export class PushSubscriptionLimitError extends Error {
+  constructor(max: number) {
+    super(`Push subscriptions limit exceeded (max ${max.toString()})`);
+    this.name = 'PushSubscriptionLimitError';
+  }
+}
+
 export interface SystemData {
   status: SystemStatus;
   last_active_at: string;

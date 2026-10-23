@@ -7,6 +7,7 @@ import { processScheduledCheck } from '@/services/cron';
 import {
   addPushSubscription,
   getSystemData,
+  MAX_PUSH_SUBSCRIPTIONS,
   removePushSubscription,
   saveSystemData,
   updateActivity,
@@ -212,6 +213,25 @@ describe('Hono API エンドポイント（src/index.tsx）', () => {
       success: true,
       total_devices: 1,
     });
+  });
+
+  it('POST /api/push/subscribe は登録端末数の上限を超える場合に 409 を返すこと', async () => {
+    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => { /* noop */ });
+    for (let i = 0; i < MAX_PUSH_SUBSCRIPTIONS; i++) {
+      await addPushSubscription(mockKv as any, {
+        endpoint: `https://push.example.com/sub${i.toString()}`,
+        keys: { p256dh: 'p256', auth: 'auth' },
+      });
+    }
+
+    const client = testClient(app, env);
+    const res = await client.api.push.subscribe.$post({
+      json: { endpoint: 'https://push.example.com/over-limit', keys: { p256dh: 'p256', auth: 'auth' } },
+    });
+    expect(res.status).toBe(409);
+    expect(await res.json()).toEqual({ error: `Push subscriptions limit exceeded (max ${MAX_PUSH_SUBSCRIPTIONS.toString()})` });
+    expect(consoleErrorSpy).not.toHaveBeenCalled();
+    consoleErrorSpy.mockRestore();
   });
 
   it('DELETE /api/push/subscribe は Web Push 端末を解除しバリデーションチェックを行うこと', async () => {
