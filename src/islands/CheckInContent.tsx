@@ -69,13 +69,15 @@ export function CheckInContent({ data: initialData, vapidPublicKey }: Readonly<C
     }
 
     try {
-      const reg = await navigator.serviceWorker.register('/sw.js');
+      await navigator.serviceWorker.register('/sw.js');
       const permission = await Notification.requestPermission();
       if (permission !== 'granted') {
         setMsg({ text: '通知の許可が得られませんでした。', isError: true });
         return;
       }
 
+      // 初回登録直後の Service Worker は有効化前で購読できないため、有効化を待つ
+      const reg = await navigator.serviceWorker.ready;
       const sub = await reg.pushManager.subscribe({
         userVisibleOnly: true,
         applicationServerKey: vapidPublicKey,
