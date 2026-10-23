@@ -199,6 +199,8 @@ Cloudflare Workers の `send_email` バインディング（`env.SEND_EMAIL`）�
 
 本プロジェクトの運用環境変数は、すべて [wrangler.jsonc](../wrangler.jsonc)（Git 管理対象外）の `vars` セクションにて一元管理される。
 
+バインディングおよび環境変数の型（`Env`）は手書きせず、`wrangler types` が wrangler.jsonc から生成する `CloudflareBindings`（`worker-configuration.d.ts`）を使用する。`vars` やバインディングを追加・削除した場合は `pnpm typecheck`（`wrangler types` を自動実行）で型を再生成する。
+
 ### 環境変数（`vars`）一覧
 
 - `BASE_URL`: システムの展開先 URL（生存確認画面 URL の組み立てに使用）

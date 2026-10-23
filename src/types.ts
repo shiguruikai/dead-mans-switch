@@ -1,4 +1,3 @@
-import type { KVNamespace } from '@cloudflare/workers-types';
 import type { PushSubscription } from 'web-push';
 
 export type SystemStatus = 'NORMAL' | 'WARNING' | 'DEAD';
@@ -25,25 +24,8 @@ export interface SystemData {
   push_subscriptions: PushSubscription[];
 }
 
-export interface Env {
-  // KV Namespace
-  DMS_KV: KVNamespace;
-
-  // Cloudflare Email agent
-  SEND_EMAIL: SendEmail;
-
-  // Environment variables (vars)
-  BASE_URL: string;
-  SENDER_EMAIL_ADDRESS: string;
-  VAPID_SUBJECT: string;
-  OWNER_EMAIL_ADDRESS: string;
-  KIN_EMAIL_ADDRESS: string;
-  VAPID_PUBLIC_KEY: string;
-  VAPID_PRIVATE_KEY: string;
-  WARNING_DAYS: string;
-  DEAD_DAYS: string;
-  WARNING_EMAIL_SUBJECT: string;
-  WARNING_EMAIL_BODY: string;
-  DEAD_EMAIL_SUBJECT: string;
+// wrangler.jsonc から `wrangler types` で生成されるバインディング型（worker-configuration.d.ts）を使用する。
+// DEAD_EMAIL_BODY は未設定時に既定の本文を使用するため省略可能とする
+export type Env = Omit<CloudflareBindings, 'DEAD_EMAIL_BODY'> & {
   DEAD_EMAIL_BODY?: string;
-}
+};

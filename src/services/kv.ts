@@ -1,4 +1,3 @@
-import type { KVNamespace } from '@cloudflare/workers-types';
 import type { PushSubscription } from 'web-push';
 
 import type { SystemData } from '@/types';
