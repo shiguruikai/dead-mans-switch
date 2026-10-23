@@ -14,6 +14,7 @@ import {
   loadSystemConfig,
   parseCliArgs,
   printUsage,
+  quoteShellArg,
 } from './cli';
 
 describe('Dead Man\'s Switch CLI ユニットテスト (scripts/cli.ts)', () => {
@@ -41,6 +42,13 @@ describe('Dead Man\'s Switch CLI ユニットテスト (scripts/cli.ts)', () => 
 
     it('存在しないディレクトリの場合詳細なエラーメッセージとともに例外をスローすること', () => {
       expect(() => loadSystemConfig('/non/existent/path')).toThrow('Failed to read wrangler.jsonc:');
+    });
+  });
+
+  describe('quoteShellArg (シェル引数のクォート)', () => {
+    it('空白を含む引数のみをダブルクォートで囲むこと', () => {
+      expect(quoteShellArg('C:\\Users\\John Doe\\AppData\\Local\\Temp\\dms_kv.json')).toBe('"C:\\Users\\John Doe\\AppData\\Local\\Temp\\dms_kv.json"');
+      expect(quoteShellArg('--binding=DMS_KV')).toBe('--binding=DMS_KV');
     });
   });
 

@@ -253,9 +253,14 @@ export async function confirmAction(question: string): Promise<boolean> {
   });
 }
 
+export function quoteShellArg(arg: string): string {
+  // 一時ファイルのパス等に空白が含まれても 1 つの引数として渡す（cmd.exe / sh 共通）
+  return /\s/.test(arg) ? `"${arg}"` : arg;
+}
+
 export function runWrangler(args: string[]): string {
   try {
-    return execSync(`pnpm wrangler ${args.join(' ')}`, { encoding: 'utf-8', stdio: 'pipe' }).trim();
+    return execSync(`pnpm wrangler ${args.map(quoteShellArg).join(' ')}`, { encoding: 'utf-8', stdio: 'pipe' }).trim();
   } catch (err) {
     if (err && typeof err === 'object' && 'stderr' in err && typeof err.stderr === 'string') {
       const stderr = err.stderr.trim();
