@@ -280,6 +280,11 @@ export function extractJsonFromText(text: string): string {
   return text.slice(start, end + 1);
 }
 
+export function isKvValueNotFound(output: string): boolean {
+  // wrangler kv key get はキーが存在しない場合も終了コード 0 で「Value not found」を標準出力に出す
+  return /^Value not found$/m.test(output);
+}
+
 export function getSystemDataFromKV(isRemote: boolean): SystemData {
   const envFlag = isRemote ? '--remote' : '--local';
   const args = ['kv', 'key', 'get', 'system_data', envFlag, '--binding=DMS_KV'];
@@ -287,7 +292,7 @@ export function getSystemDataFromKV(isRemote: boolean): SystemData {
   try {
     const rawOutput = runWrangler(args);
 
-    if (!rawOutput) {
+    if (!rawOutput || isKvValueNotFound(rawOutput)) {
       console.error('[WARN] system_data not found in KV. Initializing default data.');
       return {
         status: 'NORMAL',

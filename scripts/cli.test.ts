@@ -1,3 +1,4 @@
+import { execSync } from 'node:child_process';
 import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
@@ -10,12 +11,15 @@ import {
   CLI_VERSION,
   computeNextSystemData,
   extractJsonFromText,
+  getSystemDataFromKV,
   isMain,
   loadSystemConfig,
   parseCliArgs,
   printUsage,
   quoteShellArg,
 } from './cli';
+
+vi.mock('node:child_process', () => ({ execSync: vi.fn() }));
 
 describe('Dead Man\'s Switch CLI ユニットテスト (scripts/cli.ts)', () => {
   describe('loadSystemConfig (設定ファイルの動的読み込み)', () => {
@@ -49,6 +53,23 @@ describe('Dead Man\'s Switch CLI ユニットテスト (scripts/cli.ts)', () => 
     it('空白を含む引数のみをダブルクォートで囲むこと', () => {
       expect(quoteShellArg('C:\\Users\\John Doe\\AppData\\Local\\Temp\\dms_kv.json')).toBe('"C:\\Users\\John Doe\\AppData\\Local\\Temp\\dms_kv.json"');
       expect(quoteShellArg('--binding=DMS_KV')).toBe('--binding=DMS_KV');
+    });
+  });
+
+  describe('getSystemDataFromKV (KV データの取得)', () => {
+    it('KV にキーが存在しない場合は既定のデータを返すこと', () => {
+      // wrangler kv key get はキーが存在しない場合も終了コード 0 で「Value not found」を出力する
+      vi.mocked(execSync).mockReturnValue('Value not found\n');
+      const spyError = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+
+      const data = getSystemDataFromKV(false);
+
+      expect(data.status).toBe('NORMAL');
+      expect(data.warning_sent_at).toBeNull();
+      expect(data.dead_sent_at).toBeNull();
+      expect(data.push_subscriptions).toEqual([]);
+      expect(spyError).toHaveBeenCalledWith(expect.stringContaining('system_data not found in KV'));
+      spyError.mockRestore();
     });
   });
 
