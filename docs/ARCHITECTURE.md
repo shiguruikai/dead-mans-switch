@@ -81,8 +81,8 @@ Cloudflare Dashboard > **Zero Trust** > **Access controls** 設定にてドメ�
 | **`GET /`** | **Allow (User Email / Identity)** | 本人の Google アカウント / Passkey 認証を通したユーザーのみアクセス許可。 |
 | **`POST /api/push/subscribe`** | **Allow (User Email / Identity)** | 本人端末からのみ Web Push 登録を許可。 |
 | **`DELETE /api/push/subscribe`** | **Allow (User Email / Identity)** | 本人端末からの Web Push 登録解除を許可。 |
-| **`POST /api/ping`** | **Allow / Bypass (Service Token)** | 生存確認画面および外部スクリプト等からの生存報告用。ユーザー認証および Service Token (`CF-Access-Client-Id` / `CF-Access-Client-Secret`) で許可。 |
-| **`GET /api/status`** | **Allow / Bypass (Service Token)** | デバッグ・外部状態監視用に Access ユーザー認証および Service Token で許可。 |
+| **`POST /api/ping`** | **Allow / Service Auth (Service Token)** | 生存確認画面および外部スクリプト等からの生存報告用。ユーザー認証および Service Token (`CF-Access-Client-Id` / `CF-Access-Client-Secret`) で許可。 |
+| **`GET /api/status`** | **Allow / Service Auth (Service Token)** | デバッグ・外部状態監視用に Access ユーザー認証および Service Token で許可。 |
 
 ※ `public/sw.js` は Workers Static Assets (`assets = { directory = "./public" }`) により Hono 側を経由せず静的に自動配信される。
 

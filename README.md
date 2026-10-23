@@ -157,7 +157,7 @@ pnpm cli reset --remote
 3. **Public hostnames** に `<YOUR_WORKER_DOMAIN>`（例: `dead-mans-switch.example.workers.dev`）を入力します。
 4. **Access Policies** にて以下の2つのポリシーを追加します。
    - **本人用ポリシー**: デフォルトで定義済みの `Allow My Email` など本人確認ができる任意のポリシー
-   - **外部スクリプト用ポリシー**: 前述の手順で作成した Service Token で Bypass するポリシー
+   - **外部スクリプト用ポリシー**: 前述の手順で作成した Service Token を指定し、アクションを **Service Auth** にしたポリシー（Service Token のセレクターは Service Auth でのみ使用できます）
 
 > [!WARNING]
 >
