@@ -136,10 +136,12 @@ interface DeadResult {
   deadSentAt: string | null;
 }
 
+const DEFAULT_DEAD_EMAIL_BODY
+  = '本通知は Dead Man\'s Switch システムにより自動送信されています。\n規定期間の生存シグナルが確認できなかったため、手続情報および案内をお送りいたします。';
+
 async function sendDeadNotifications(env: Env, now: Date): Promise<DeadResult> {
-  const deadBodyTemplate
-    = env.DEAD_EMAIL_BODY
-      ?? '本通知は Dead Man\'s Switch システムにより自動送信されています。\n規定期間の生存シグナルが確認できなかったため、手続情報および案内をお送りいたします。';
+  // 未設定だけでなく空文字・空白のみの場合も既定の本文を使用する
+  const deadBodyTemplate = env.DEAD_EMAIL_BODY?.trim() ? env.DEAD_EMAIL_BODY : DEFAULT_DEAD_EMAIL_BODY;
 
   let deadSentAt: string | null = null;
 

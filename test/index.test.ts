@@ -330,6 +330,37 @@ describe('定時実行 Cron タスク（src/services/cron.ts）', () => {
     expect(env.SEND_EMAIL.send).toHaveBeenCalledTimes(1);
   });
 
+  it.each(['', '   \n'])('DEAD_EMAIL_BODY が空（%j）の場合は既定の本文で死後通知を送信すること', async (body) => {
+    env.DEAD_EMAIL_BODY = body;
+
+    const data = await getSystemData(mockKv as any);
+    data.last_active_at = subDays(new Date(), 14).toISOString();
+    data.status = 'WARNING';
+    data.warning_sent_at = subDays(new Date(), 7).toISOString();
+    await saveSystemData(mockKv as any, data);
+
+    const result = await processScheduledCheck(env);
+    expect(result.status).toBe('DEAD');
+    expect(env.SEND_EMAIL.send).toHaveBeenCalledTimes(1);
+    expect(env.SEND_EMAIL.send).toHaveBeenCalledWith(expect.objectContaining({
+      to: 'kin@example.com',
+      text: expect.stringContaining('本通知は Dead Man\'s Switch システムにより自動送信されています。'),
+    }));
+  });
+
+  it('DEAD_EMAIL_BODY が設定されている場合はその本文で死後通知を送信すること', async () => {
+    const data = await getSystemData(mockKv as any);
+    data.last_active_at = subDays(new Date(), 14).toISOString();
+    data.status = 'WARNING';
+    data.warning_sent_at = subDays(new Date(), 7).toISOString();
+    await saveSystemData(mockKv as any, data);
+
+    await processScheduledCheck(env);
+    expect(env.SEND_EMAIL.send).toHaveBeenCalledWith(expect.objectContaining({
+      text: '契約者の生存確認が途絶えました。',
+    }));
+  });
+
   it('複数のメールアドレス設定時に各宛先へ個別送信が行われること', async () => {
     env.OWNER_EMAIL_ADDRESS = 'owner1@example.com, owner2@example.com';
     env.KIN_EMAIL_ADDRESS = 'kin1@example.com, kin2@example.com, kin3@example.com';
