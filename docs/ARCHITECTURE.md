@@ -56,9 +56,8 @@ dead-mans-switch/
 │   └── cli.test.ts            # CLI ツール単体テスト（Node.js 環境）
 └── test/
     ├── index.test.ts          # システム・API 自動テスト
-    ├── email.test.ts          # メール処理モジュール単体テスト（宛先解析・複数宛先送信）
     ├── services/
-    │   └── email.test.ts      # メール送信バインディング呼び出しテスト
+    │   └── email.test.ts      # メール処理モジュール単体テスト（宛先解析・複数宛先送信）
     └── utils/
         └── date.test.ts       # 日付ユーティリティ単体テスト
 ```
