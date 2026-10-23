@@ -9,10 +9,7 @@
   "assets": {
     "directory": "./public"
   },
-  // Preview URL（<version>-<name>.<subdomain>.workers.dev）は Access の保護対象外となるため無効化する
-  // 未指定の場合、wrangler deploy 時に workers.dev の有効状態に合わせて Preview URL が有効化される
   "preview_urls": false,
-  // Workers Logs を有効化する（Cron の送信失敗等の console.error を保存し、ダッシュボードで確認できるようにする）
   "observability": {
     "enabled": true
   },
