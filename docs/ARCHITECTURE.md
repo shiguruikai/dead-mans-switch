@@ -140,6 +140,10 @@ Cloudflare Dashboard > **Zero Trust** > **Access controls** 設定にてドメ�
 2. **システムロックアウト例外（`403 Forbidden`）**:
    - システムステータスが `DEAD` の状態において生存報告操作（`updateActivity`）が行われた場合、KV サービス層で `SystemLockedError` カスタム例外を発生させる。
    - Hono の `app.onError()` グローバルエラーハンドラーが本例外をキャッチし、一貫して `403 Forbidden` (`{"error": "System locked out (status is DEAD)"}`) レスポンスへ変換して返却する。
+3. **Hono の HTTP 例外（`4xx`）**:
+   - 不正な JSON ボディ等で Hono が送出する `HTTPException` は、`app.onError()` でそのステータスのまま返却する（例: `400 Bad Request`（`{"error": "Malformed JSON in request body"}`））。
+4. **予期しない例外（`500 Internal Server Error`）**:
+   - 上記以外の例外は `console.error` でログ出力したうえで `500 Internal Server Error`（`{"error": ...}`）を返却する。
 
 ## 5. 定期実行処理（Cron Trigger）と状態遷移
 

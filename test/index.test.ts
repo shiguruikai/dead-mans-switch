@@ -239,6 +239,30 @@ describe('Hono API エンドポイント（src/index.tsx）', () => {
     });
   });
 
+  it('不正な JSON ボディには 500 ではなく 400 を返すこと', async () => {
+    const res = await app.request('/api/push/subscribe', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: '{invalid json',
+    }, env);
+    expect(res.status).toBe(400);
+    expect(await res.json()).toEqual({
+      error: 'Malformed JSON in request body',
+    });
+  });
+
+  it('予期しない例外は 500 を返しエラーログを出力すること', async () => {
+    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => { /* noop */ });
+    vi.spyOn(mockKv, 'get').mockRejectedValue(new Error('KV unavailable'));
+
+    const client = testClient(app, env);
+    const res = await client.api.status.$get();
+    expect(res.status).toBe(500);
+    expect(await res.json()).toEqual({ error: 'KV unavailable' });
+    expect(consoleErrorSpy).toHaveBeenCalledWith('Unhandled error:', expect.any(Error));
+    consoleErrorSpy.mockRestore();
+  });
+
   it('GET /api/status はシステム詳細状態を返却すること', async () => {
     const client = testClient(app, env);
     const res = await client.api.status.$get();

@@ -1,6 +1,7 @@
 import { zValidator } from '@hono/zod-validator';
 import type { Context } from 'hono';
 import { Hono } from 'hono';
+import { HTTPException } from 'hono/http-exception';
 import { jsxRenderer } from 'hono/jsx-renderer';
 import { Link, Script, ViteClient } from 'vite-ssr-components/hono';
 import * as z from 'zod';
@@ -33,6 +34,11 @@ const app = new Hono<{ Bindings: Env }>()
     if (err instanceof SystemLockedError) {
       return c.json({ error: err.message }, 403);
     }
+    // 不正な JSON ボディ等で Hono が投げる 4xx は、そのステータスのまま返す
+    if (err instanceof HTTPException) {
+      return err.res ?? c.json({ error: err.message }, err.status);
+    }
+    console.error('Unhandled error:', err);
     const message = err instanceof Error ? err.message : String(err);
     return c.json({ error: message }, 500);
   })
