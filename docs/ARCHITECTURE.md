@@ -56,6 +56,9 @@ dead-mans-switch/
 │   └── cli.test.ts            # CLI ツール単体テスト（Node.js 環境）
 └── test/
     ├── index.test.ts          # システム・API 自動テスト
+    ├── email.test.ts          # メール処理モジュール単体テスト（宛先解析・複数宛先送信）
+    ├── services/
+    │   └── email.test.ts      # メール送信バインディング呼び出しテスト
     └── utils/
         └── date.test.ts       # 日付ユーティリティ単体テスト
 ```
@@ -74,17 +77,24 @@ dead-mans-switch/
 
 ### 4.1. Access controls
 
-Cloudflare Dashboard > **Zero Trust** > **Access controls** 設定にてドメイン全体（全パス）を保護対象とし、アクセス方法に応じたルールを適用する。
+Cloudflare Dashboard > **Zero Trust** > **Access controls** にて、Worker のドメイン全体（全パス）を1つのアプリケーションで保護し、以下の2つのポリシーを適用する。
 
-| パス / エンドポイント | 適用される Zero Trust Policy | 詳細 |
+| ポリシー | アクション | 許可対象 |
 | :--- | :--- | :--- |
-| **`GET /`** | **Allow (User Email / Identity)** | 本人の Google アカウント / Passkey 認証を通したユーザーのみアクセス許可。 |
-| **`POST /api/push/subscribe`** | **Allow (User Email / Identity)** | 本人端末からのみ Web Push 登録を許可。 |
-| **`DELETE /api/push/subscribe`** | **Allow (User Email / Identity)** | 本人端末からの Web Push 登録解除を許可。 |
-| **`POST /api/ping`** | **Allow / Service Auth (Service Token)** | 生存確認画面および外部スクリプト等からの生存報告用。ユーザー認証および Service Token (`CF-Access-Client-Id` / `CF-Access-Client-Secret`) で許可。 |
-| **`GET /api/status`** | **Allow / Service Auth (Service Token)** | デバッグ・外部状態監視用に Access ユーザー認証および Service Token で許可。 |
+| **本人用ポリシー**（例: `Allow My Email`） | **Allow** | 本人確認（メールアドレス等）を通過したユーザー |
+| **外部スクリプト用ポリシー** | **Service Auth** | Service Token (`CF-Access-Client-Id` / `CF-Access-Client-Secret`) を付与したリクエスト |
 
-※ `public/sw.js` は Workers Static Assets (`assets = { directory = "./public" }`) により Hono 側を経由せず静的に自動配信される。
+ポリシーはパス単位ではなくドメイン全体に適用されるため、いずれの方法で認証しても全エンドポイントへ到達できる。各エンドポイントの想定利用元は以下のとおり。
+
+| パス / エンドポイント | 想定利用元 |
+| :--- | :--- |
+| **`GET /`** | 本人（ブラウザ） |
+| **`POST /api/push/subscribe`** | 本人（ブラウザ） |
+| **`DELETE /api/push/subscribe`** | 本人（ブラウザ） |
+| **`POST /api/ping`** | 本人（ブラウザ）、外部スクリプト（Service Token 認証） |
+| **`GET /api/status`** | 本人（ブラウザ）、外部スクリプト（Service Token 認証）。デバッグ・外部状態監視用 |
+
+※ `public/sw.js` は Workers Static Assets（`wrangler.jsonc` の `"assets": { "directory": "./public" }`）により Hono 側を経由せず静的に自動配信される。
 
 ### 4.2. API 詳細仕様
 
