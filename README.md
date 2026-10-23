@@ -159,6 +159,10 @@ pnpm cli reset --remote
    - **本人用ポリシー**: デフォルトで定義済みの `Allow My Email` など本人確認ができる任意のポリシー
    - **外部スクリプト用ポリシー**: 前述の手順で作成した Service Token で Bypass するポリシー
 
+> [!WARNING]
+>
+> 上記のアプリケーションは `<YOUR_WORKER_DOMAIN>` のみを保護し、Preview URL（`<version>-dead-mans-switch.<subdomain>.workers.dev`）は保護しません。Preview URL が有効だと認証なしで全エンドポイントへ到達できるため、[wrangler.jsonc](wrangler.jsonc) の `"preview_urls": false` を削除・変更しないでください。
+
 #### 5.3 外部スクリプトからの呼び出し例
 
 自動生存報告を行うスクリプトからは、以下のヘッダーを付与してリクエストを送信します：

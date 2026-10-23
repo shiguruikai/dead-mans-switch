@@ -199,6 +199,11 @@ Cloudflare Workers の `send_email` バインディング（`env.SEND_EMAIL`）�
 - `WARNING_EMAIL_SUBJECT` / `WARNING_EMAIL_BODY`: 生存確認リマインダーメールの件名および本文テンプレート
 - `DEAD_EMAIL_SUBJECT` / `DEAD_EMAIL_BODY`: 死後通知メールの件名および本文テンプレート
 
+### 公開範囲・可観測性の設定
+
+- `preview_urls: false`: Preview URL（`<version>-<name>.<subdomain>.workers.dev`）を無効化する。Access アプリケーションは `<name>.<subdomain>.workers.dev` のみを保護対象とするため、Preview URL を有効にすると認証なしで全エンドポイントへ到達できてしまう。未指定の場合、`wrangler deploy` 時に workers.dev の有効状態に合わせて Preview URL が有効化されるため、明示的に `false` を指定する。
+- `observability.enabled: true`: Workers Logs を有効化し、Cron の通知送信失敗や予期しない例外の `console.error` を保存する。
+
 設定ファイルのテンプレート（[wrangler.jsonc.example](../wrangler.jsonc.example)）およびセットアップ手順の詳細については [README.md](../README.md) を参照。
 
 ## 8. CLI ツール設計
