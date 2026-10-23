@@ -1,6 +1,8 @@
-import { resolve } from 'node:path';
+import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join, resolve } from 'node:path';
 
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { SystemData } from '../src/types';
 import { subDays } from '../src/utils/date';
@@ -16,10 +18,25 @@ import {
 
 describe('Dead Man\'s Switch CLI ユニットテスト (scripts/cli.ts)', () => {
   describe('loadSystemConfig (設定ファイルの動的読み込み)', () => {
+    let tempDir: string;
+
+    beforeEach(() => {
+      tempDir = mkdtempSync(join(tmpdir(), 'dms-cli-test-'));
+    });
+
+    afterEach(() => {
+      rmSync(tempDir, { recursive: true, force: true });
+    });
+
     it('wrangler.jsonc から WARNING_DAYS と DEAD_DAYS を正しく読み込めること', () => {
-      const config = loadSystemConfig();
-      expect(config.warningDays).toBe(1);
-      expect(config.deadDays).toBe(2);
+      // ローカルの wrangler.jsonc の値に依存しないよう、一時ディレクトリに JSONC 形式の設定ファイルを用意する
+      writeFileSync(join(tempDir, 'wrangler.jsonc'), `{
+  // comment
+  "vars": { "WARNING_DAYS": "7", "DEAD_DAYS": "14", },
+}`);
+      const config = loadSystemConfig(tempDir);
+      expect(config.warningDays).toBe(7);
+      expect(config.deadDays).toBe(14);
     });
 
     it('存在しないディレクトリの場合詳細なエラーメッセージとともに例外をスローすること', () => {
