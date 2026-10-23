@@ -314,6 +314,7 @@ export function getSystemDataFromKV(isRemote: boolean): SystemData {
 export function saveSystemDataToKV(data: SystemData, isRemote: boolean): void {
   const envFlag = isRemote ? '--remote' : '--local';
   const tempFilePath = join(tmpdir(), `dms_kv_${String(Date.now())}_${Math.random().toString(36).slice(2)}.json`);
+  let failed = false;
   try {
     writeFileSync(tempFilePath, JSON.stringify(data, null, 2), 'utf-8');
     const args = ['kv', 'key', 'put', 'system_data', '--path', tempFilePath, envFlag, '--binding=DMS_KV'];
@@ -323,7 +324,7 @@ export function saveSystemDataToKV(data: SystemData, isRemote: boolean): void {
     console.error('[ERROR] Failed to update KV data.');
     console.error('Troubleshooting: Check Wrangler authentication and binding settings.');
     console.error('Details:', err instanceof Error ? err.message : err);
-    process.exit(1);
+    failed = true;
   } finally {
     try {
       if (existsSync(tempFilePath)) {
@@ -332,6 +333,11 @@ export function saveSystemDataToKV(data: SystemData, isRemote: boolean): void {
     } catch {
       // Ignore temporary file deletion error
     }
+  }
+
+  // process.exit() は finally を実行せずに終了するため、一時ファイルの削除後に終了する
+  if (failed) {
+    process.exit(1);
   }
 }
 
