@@ -344,7 +344,7 @@ export function triggerCronCheck(isRemote: boolean): void {
     console.error('Check Cron Trigger settings at Cloudflare Dashboard > Workers & Pages > [Worker] > Settings > Triggers.');
   } else {
     console.error('Updated local KV data.');
-    console.error('When running local dev server (pnpm dev), visit http://localhost:5173/__scheduled to manually trigger scheduled events.');
+    console.error('When running local dev server (pnpm dev), visit http://localhost:5173/cdn-cgi/local/scheduled to manually trigger scheduled events.');
   }
 }
 
